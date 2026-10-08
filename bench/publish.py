@@ -30,9 +30,17 @@ METRICS = (
     ("false pos.", "false_positive_rate", False),
     ("failed", "failure_rate", False),
 )
+METRIC_DEFINITIONS = {
+    "recall": "Recall: of the valid runs on samples expecting the category, the share that "
+    "assigned it. Runs that failed validation are left out.",
+    "false_positive_rate": "False positive rate: of the valid runs on samples expecting the "
+    "category absent, the share that assigned it anyway. Runs that failed validation are left out.",
+    "failure_rate": "Failed validation: of all runs (samples x reps), the share whose worker "
+    "output the validator rejected. These count toward neither recall nor false positive rate.",
+}
 PYTORCH_URL = "https://github.com/pytorch/pytorch"
 REPO_URL = "https://github.com/soulitzer/pr-triage-bench"
-# Config files a run reads from pytorch, by repo path, unless overridden.
+# Config files a run reads from pytorch, by repo path.
 PYTORCH_CONFIG_PATHS = {
     "worker.md": "scripts/auto_pr_triage/worker.md",
     "CODEOWNERS": "CODEOWNERS",
@@ -202,8 +210,15 @@ def render_case_row(case: Case, /, *, owner: str, runs: list[PublishedRun]) -> s
             continue
         failed = f'<br><span class="sub">{result.failed_runs} failed</span>' if result.failed_runs else ""
         css = ratio_class((result.passed, result.judged_runs), higher_is_better=True)
+        verb = "assigned" if expectation == "assign" else "did not assign"
+        tooltip = (
+            f"pass {result.passed}/{result.judged_runs}: of {result.judged_runs} valid runs, "
+            f"{result.passed} {verb} {owner}, as expected"
+            + (f"; {result.failed_runs} more runs failed validation" if result.failed_runs else "")
+        )
         cells.append(
-            f'<td class="{css} run-start" data-run="{run.index}">pass {result.passed}/{result.judged_runs}{failed}</td>'
+            f'<td class="{css} run-start" data-run="{run.index}" title="{escape(tooltip)}">'
+            f"pass {result.passed}/{result.judged_runs}{failed}</td>"
         )
     return (
         f'<tr><td><a href="{PYTORCH_URL}/pull/{case.pr}">#{case.pr}</a><br>'
@@ -217,17 +232,49 @@ def render_case_row(case: Case, /, *, owner: str, runs: list[PublishedRun]) -> s
     )
 
 
+def explain_metric(summary: CategorySummary, /, *, field: str) -> str:
+    """Spell out one score cell's numerator and denominator."""
+
+    numerator, denominator = getattr(summary, field)
+    if field == "failure_rate":
+        return (
+            f"Failed validation {numerator}/{denominator}: {numerator} of all {denominator} runs "
+            f"({len(summary.results)} samples x reps) were rejected by the validator and count "
+            "toward neither recall nor false positive rate."
+        )
+    expectation, kind, suffix = (
+        ("assign", "assign", "") if field == "recall" else ("not_assign", "not-assign", " anyway")
+    )
+    results = [r for r in summary.results if r.expectation == expectation]
+    if not results:
+        return f"No {kind} samples for {summary.owner} yet."
+    failed = sum(r.failed_runs for r in results)
+    label = "Recall" if field == "recall" else "False positive rate"
+    return (
+        f"{label} {numerator}/{denominator}: {denominator} valid runs on the {len(results)} {kind} "
+        f"samples ({denominator + failed} runs, {failed} failed validation); {numerator} of them "
+        f"assigned {summary.owner}{suffix}."
+    )
+
+
 def render_grid_cell(
-    ratio: tuple[int, int] | None, /, *, higher_is_better: bool, starts_run: bool, run_index: int
+    summary: CategorySummary | None,
+    /,
+    *,
+    field: str,
+    higher_is_better: bool,
+    starts_run: bool,
+    run_index: int,
 ) -> str:
     edge = " run-start" if starts_run else ""
-    if ratio is None:
+    if summary is None:
         return f'<span class="cell na{edge}" data-run="{run_index}">-</span>'
-    numerator, denominator = ratio
-    css = ratio_class(ratio, higher_is_better=higher_is_better)
+    numerator, denominator = getattr(summary, field)
+    css = ratio_class((numerator, denominator), higher_is_better=higher_is_better)
     rate = f"{numerator / denominator:.0%}" if denominator else "n/a"
     return (
-        f'<span class="cell {css}{edge}" data-run="{run_index}">{rate}'
+        f'<span class="cell {css}{edge}" data-run="{run_index}" '
+        f'title="{escape(explain_metric(summary, field=field))}">{rate}'
         f'<span class="sub"> {numerator}/{denominator}</span></span>'
     )
 
@@ -247,7 +294,8 @@ def render_category(owner: str, /, *, cases: list[Case], runs: list[PublishedRun
     )
     cells = "".join(
         render_grid_cell(
-            getattr(run.summaries[owner], field) if owner in run.summaries else None,
+            run.summaries.get(owner),
+            field=field,
             higher_is_better=higher_is_better,
             starts_run=index == 0,
             run_index=run.index,
@@ -280,9 +328,10 @@ def render_category_table(*, owners: list[str], cases: list[Case], runs: list[Pu
         for run in runs
     )
     metric_heads = "".join(
-        f'<span class="cell head{" run-start" if index == 0 else ""}" data-run="{run.index}">{label}</span>'
+        f'<span class="cell head{" run-start" if index == 0 else ""}" data-run="{run.index}" '
+        f'title="{escape(METRIC_DEFINITIONS[field])}">{label}</span>'
         for run in runs
-        for index, (label, _, _) in enumerate(METRICS)
+        for index, (label, field, _) in enumerate(METRICS)
     )
     header = (
         f'<div class="grid header"><span class="cell head name">category</span>'
@@ -413,13 +462,15 @@ function render() {
   out.append(node("h3", "Metrics"));
   const metricRows = [];
   const metricOwners = [...new Set([...Object.keys(a.metrics), ...Object.keys(b.metrics)])].sort();
-  metricOwners.forEach(o => data.metrics.forEach(([label, field, higherIsBetter]) => {
+  metricOwners.forEach(o => data.metrics.forEach(([label, field, higherIsBetter, definition]) => {
     const ra = (a.metrics[o] || {})[field];
     const rb = (b.metrics[o] || {})[field];
     const delta = rate(ra) === null || rate(rb) === null ? null : Math.round(100 * (rate(rb) - rate(ra)));
     const cls = !delta ? "" : (delta > 0) === higherIsBetter ? "better" : "worse";
     const shown = delta === null ? "-" : (delta > 0 ? "+" : "") + delta + " pts";
-    metricRows.push(row([o, label, fmt(ra), fmt(rb), node("td", shown, cls)]));
+    const name = node("td", label);
+    name.title = definition;
+    metricRows.push(row([o, name, fmt(ra), fmt(rb), node("td", shown, cls)]));
   }));
   out.append(table(["category", "metric", a.name, b.name, "change"], metricRows));
 
@@ -448,7 +499,7 @@ def render_compare_section(*, cases: list[Case], runs: list[PublishedRun]) -> st
     """Two run pickers and the data the comparison script renders from."""
 
     data = {
-        "metrics": [[label, field, higher] for label, field, higher in METRICS],
+        "metrics": [[label, field, higher, METRIC_DEFINITIONS[field]] for label, field, higher in METRICS],
         "cases": {
             case.pr: {"title": case.title, "expected": case.expected} for case in cases
         },
@@ -532,6 +583,7 @@ def render_page(*, cases: list[Case], runs: list[PublishedRun]) -> str:
   td.desc ins {{ background: #dafbe1; color: #116329; text-decoration: none; }}
   .pickers {{ background: #f6f8fa; padding: 0.6rem 0.8rem; border: 1px solid #d0d7de; }}
   .slot {{ font-weight: 700; }}
+  [title] {{ cursor: help; }}
   td details summary {{ font-weight: normal; color: #0969da; }}
   .sub {{ color: #656d76; font-size: 0.85em; font-weight: normal; }}
 </style>

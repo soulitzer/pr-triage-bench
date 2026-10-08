@@ -10,7 +10,7 @@ from __future__ import annotations
 import argparse
 import json
 import shutil
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 from html import escape
 from pathlib import Path
@@ -43,6 +43,7 @@ PYTORCH_CONFIG_PATHS = {
 
 @dataclass(frozen=True)
 class PublishedRun:
+    index: int
     name: str
     meta: dict
     summaries: dict[str, CategorySummary]
@@ -90,6 +91,7 @@ def load_descriptions(run_dir: Path, /) -> dict[str, str]:
 def load_published_runs(*, cases: list[Case]) -> list[PublishedRun]:
     runs = [
         PublishedRun(
+            index=-1,
             name=run_dir.name,
             meta=json.loads((run_dir / "meta.json").read_text()),
             summaries=score_run(run_dir, cases=cases),
@@ -98,7 +100,8 @@ def load_published_runs(*, cases: list[Case]) -> list[PublishedRun]:
         for run_dir in sorted(RESULTS_DIR.iterdir())
         if (run_dir / "results.jsonl").exists()
     ]
-    return sorted(runs, key=lambda run: run.meta["published_at"])
+    ordered = sorted(runs, key=lambda run: run.meta["published_at"])
+    return [replace(run, index=index) for index, run in enumerate(ordered)]
 
 
 def ratio_class(ratio: tuple[int, int], /, *, higher_is_better: bool) -> str:
@@ -192,11 +195,13 @@ def render_case_row(case: Case, /, *, owner: str, runs: list[PublishedRun]) -> s
     for run in runs:
         result = run.result(owner=owner, pr=case.pr)
         if result is None:
-            cells.append('<td class="na run-start">not run</td>')
+            cells.append(f'<td class="na run-start" data-run="{run.index}">not run</td>')
             continue
         failed = f'<br><span class="sub">{result.failed_runs} failed</span>' if result.failed_runs else ""
         css = ratio_class((result.passed, result.judged_runs), higher_is_better=True)
-        cells.append(f'<td class="{css} run-start">pass {result.passed}/{result.judged_runs}{failed}</td>')
+        cells.append(
+            f'<td class="{css} run-start" data-run="{run.index}">pass {result.passed}/{result.judged_runs}{failed}</td>'
+        )
     return (
         f'<tr><td><a href="{PYTORCH_URL}/pull/{case.pr}">#{case.pr}</a><br>'
         f'<span class="sub">{escape(case.title)}</span></td>'
@@ -209,19 +214,24 @@ def render_case_row(case: Case, /, *, owner: str, runs: list[PublishedRun]) -> s
     )
 
 
-def render_grid_cell(ratio: tuple[int, int] | None, /, *, higher_is_better: bool, starts_run: bool) -> str:
+def render_grid_cell(
+    ratio: tuple[int, int] | None, /, *, higher_is_better: bool, starts_run: bool, run_index: int
+) -> str:
     edge = " run-start" if starts_run else ""
     if ratio is None:
-        return f'<span class="cell na{edge}">-</span>'
+        return f'<span class="cell na{edge}" data-run="{run_index}">-</span>'
     numerator, denominator = ratio
     css = ratio_class(ratio, higher_is_better=higher_is_better)
     rate = f"{numerator / denominator:.0%}" if denominator else "n/a"
-    return f'<span class="cell {css}{edge}">{rate}<span class="sub"> {numerator}/{denominator}</span></span>'
+    return (
+        f'<span class="cell {css}{edge}" data-run="{run_index}">{rate}'
+        f'<span class="sub"> {numerator}/{denominator}</span></span>'
+    )
 
 
 def render_run_heading(run: PublishedRun, /) -> str:
     return (
-        f'{escape(run.name)}<br><span class="sub">config: {escape(run.config_label)}<br>'
+        f'<span class="slot"></span>{escape(run.name)}<br><span class="sub">config: {escape(run.config_label)}<br>'
         f'pipeline: pytorch@{run.meta["pytorch_sha"][:10]}</span>'
     )
 
@@ -238,6 +248,7 @@ def render_category(owner: str, /, *, cases: list[Case], runs: list[PublishedRun
             getattr(run.summaries[owner], field) if owner in run.summaries else None,
             higher_is_better=higher_is_better,
             starts_run=index == 0,
+            run_index=run.index,
         )
         for run in runs
         for index, (_, field, higher_is_better) in enumerate(METRICS)
@@ -248,7 +259,9 @@ def render_category(owner: str, /, *, cases: list[Case], runs: list[PublishedRun
     )
     if not owner_cases:
         return f'<details class="category empty">{summary}<p class="sub">No samples yet.</p></details>'
-    run_headers = "".join(f'<th class="run-start">{render_run_heading(run)}</th>' for run in runs)
+    run_headers = "".join(
+        f'<th class="run-start" data-run="{run.index}">{render_run_heading(run)}</th>' for run in runs
+    )
     case_rows = "".join(render_case_row(case, owner=owner, runs=runs) for case in owner_cases)
     return (
         f'<details class="category">{summary}'
@@ -260,11 +273,12 @@ def render_category(owner: str, /, *, cases: list[Case], runs: list[PublishedRun
 
 def render_category_table(*, owners: list[str], cases: list[Case], runs: list[PublishedRun]) -> str:
     run_spans = "".join(
-        f'<span class="cell head run-start" style="grid-column: span {len(METRICS)}">{render_run_heading(run)}</span>'
+        f'<span class="cell head run-start" data-run="{run.index}" style="grid-column: span {len(METRICS)}">'
+        f"{render_run_heading(run)}</span>"
         for run in runs
     )
     metric_heads = "".join(
-        f'<span class="cell head{" run-start" if index == 0 else ""}">{label}</span>'
+        f'<span class="cell head{" run-start" if index == 0 else ""}" data-run="{run.index}">{label}</span>'
         for run in runs
         for index, (label, _, _) in enumerate(METRICS)
     )
@@ -278,7 +292,7 @@ def render_category_table(*, owners: list[str], cases: list[Case], runs: list[Pu
     return f'<div class="categories" style="--columns: {columns}">{header}{rows}</div>'
 
 
-COMPARE_SCRIPT = """
+COMPARE_SCRIPT = r"""
 const data = JSON.parse(document.getElementById("bench-data").textContent);
 const pickA = document.getElementById("run-a");
 const pickB = document.getElementById("run-b");
@@ -318,9 +332,59 @@ function link(pr) {
 }
 function same(x, y) { return x === y ? " (same)" : ""; }
 
+// Show only the picked runs' columns, A before B, in the table and sample tables.
+function arrangeColumns(order) {
+  const shown = order.map(String);
+  const groups = new Map();
+  document.querySelectorAll("[data-run]").forEach(cell => {
+    cell.style.display = shown.includes(cell.dataset.run) ? "" : "none";
+    if (!groups.has(cell.parentNode)) groups.set(cell.parentNode, []);
+    groups.get(cell.parentNode).push(cell);
+  });
+  groups.forEach((cells, parent) => {
+    const anchor = cells[cells.length - 1].nextSibling;
+    shown.forEach(i => cells.filter(c => c.dataset.run === i).forEach(c => parent.insertBefore(c, anchor)));
+  });
+  document.querySelectorAll("[data-run] .slot").forEach(slot => {
+    const i = shown.indexOf(slot.closest("[data-run]").dataset.run);
+    slot.textContent = i < 0 ? "" : "ABC"[i] + ": ";
+  });
+  const grid = document.querySelector(".categories");
+  if (grid) grid.style.setProperty("--columns", "16rem 6rem repeat(" + data.metrics.length * shown.length + ", 6.5rem)");
+}
+
+// Word-level diff of two texts as [op, text] pieces, op in "=", "-", "+".
+function wordDiff(before, after) {
+  const x = before.split(/(\s+)/), y = after.split(/(\s+)/);
+  const lcs = Array.from({ length: x.length + 1 }, () => new Uint16Array(y.length + 1));
+  for (let i = x.length - 1; i >= 0; i--)
+    for (let j = y.length - 1; j >= 0; j--)
+      lcs[i][j] = x[i] === y[j] ? lcs[i + 1][j + 1] + 1 : Math.max(lcs[i + 1][j], lcs[i][j + 1]);
+  const pieces = [];
+  const push = (op, text) => {
+    const last = pieces[pieces.length - 1];
+    if (last && last[0] === op) last[1] += text; else pieces.push([op, text]);
+  };
+  let i = 0, j = 0;
+  while (i < x.length && j < y.length) {
+    if (x[i] === y[j]) { push("=", x[i]); i++; j++; }
+    else if (lcs[i + 1][j] >= lcs[i][j + 1]) push("-", x[i++]);
+    else push("+", y[j++]);
+  }
+  while (i < x.length) push("-", x[i++]);
+  while (j < y.length) push("+", y[j++]);
+  return pieces;
+}
+function diffCell(before, after) {
+  const td = node("td", undefined, "desc");
+  wordDiff(before, after).forEach(([op, text]) => td.append(op === "=" ? document.createTextNode(text) : node(op === "-" ? "del" : "ins", text)));
+  return td;
+}
+
 function render() {
   const a = data.runs[pickA.value];
   const b = data.runs[pickB.value];
+  arrangeColumns(pickA.value === pickB.value ? [pickA.value] : [pickA.value, pickB.value]);
   const out = document.getElementById("compare-out");
   out.replaceChildren();
 
@@ -332,8 +396,8 @@ function render() {
   const owners = [...new Set([...Object.keys(a.descriptions), ...Object.keys(b.descriptions)])].sort();
   const changed = owners.filter(o => a.descriptions[o] !== b.descriptions[o]);
   if (changed.length) {
-    out.append(table(["category", "description in " + a.name, "description in " + b.name],
-      changed.map(o => row([o, node("td", a.descriptions[o] || "(not defined)", "desc"), node("td", b.descriptions[o] || "(not defined)", "desc")]))));
+    out.append(table(["category", "description change, " + a.name + " to " + b.name],
+      changed.map(o => row([o, diffCell(a.descriptions[o] || "", b.descriptions[o] || "")]))));
   } else {
     out.append(node("p", "No category descriptions differ.", "sub"));
   }
@@ -400,8 +464,7 @@ def render_compare_section(*, cases: list[Case], runs: list[PublishedRun]) -> st
     }
     payload = json.dumps(data).replace("</", "<\\/")
     return (
-        '<h2>Compare runs</h2><p>Run A <select id="run-a"></select> against run B '
-        '<select id="run-b"></select></p><div id="compare-out"></div>'
+        '<h2>Compare runs</h2><div id="compare-out"></div>'
         f'<script type="application/json" id="bench-data">{payload}</script>'
         f"<script>{COMPARE_SCRIPT}</script>"
     )
@@ -416,6 +479,13 @@ def render_page(*, cases: list[Case], runs: list[PublishedRun]) -> str:
     categories = render_category_table(owners=owners, cases=cases, runs=runs)
     legend = render_run_legend(runs)
     compare = render_compare_section(cases=cases, runs=runs) if len(runs) >= 2 else ""
+    pickers = (
+        '<p class="pickers">Showing run A <select id="run-a"></select> and run B '
+        '<select id="run-b"></select> <span class="sub">(the table and the comparison below '
+        "both follow these)</span></p>"
+        if len(runs) >= 2
+        else ""
+    )
     return f"""<!doctype html>
 <html lang="en">
 <head>
@@ -449,7 +519,11 @@ def render_page(*, cases: list[Case], runs: list[PublishedRun]) -> str:
   .run-start {{ border-left: 3px solid #57606a !important; }}
   td.better {{ background: #dafbe1; }}
   td.worse {{ background: #ffebe9; }}
-  td.desc {{ max-width: 34rem; font-size: 0.9em; }}
+  td.desc {{ max-width: 60rem; font-size: 0.9em; line-height: 1.5; }}
+  td.desc del {{ background: #ffebe9; color: #82071e; }}
+  td.desc ins {{ background: #dafbe1; color: #116329; text-decoration: none; }}
+  .pickers {{ background: #f6f8fa; padding: 0.6rem 0.8rem; border: 1px solid #d0d7de; }}
+  .slot {{ font-weight: 700; }}
   td details summary {{ font-weight: normal; color: #0969da; }}
   .sub {{ color: #656d76; font-size: 0.85em; font-weight: normal; }}
 </style>
@@ -467,6 +541,7 @@ runs that assign a category on samples expecting it; <b>false positive rate</b>
 is the share that assign it on samples expecting it absent. The samples are
 chosen, not sampled, so compare configs with these rather than reading them as
 production rates. Click a category to see its samples. <a href="{REPO_URL}">Source and labeling process</a>.</p>
+{pickers}
 {categories}
 {compare}
 <h2>Runs</h2>

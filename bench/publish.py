@@ -15,13 +15,20 @@ from datetime import datetime, timezone
 from html import escape
 from pathlib import Path
 
-from bench.cases import REPO_ROOT, Case, load_cases
+from bench.cases import REPO_ROOT, Case, canonical_owner, load_cases, load_owner_aliases
 from bench.score import CaseResult, CategorySummary, format_ratio, score_run
 
 
 RESULTS_DIR = REPO_ROOT / "results"
 PAGE_PATH = REPO_ROOT / "docs" / "index.html"
 PUBLISHED_FILES = ("results.jsonl", "meta.json")
+# (label, CategorySummary field, higher is better), one column each per run.
+METRICS = (
+    ("precision", "precision", True),
+    ("recall", "recall", True),
+    ("false pos.", "false_positive_rate", False),
+    ("failed", "failure_rate", False),
+)
 PYTORCH_URL = "https://github.com/pytorch/pytorch"
 REPO_URL = "https://github.com/soulitzer/pr-triage-bench"
 # Config files a run reads from pytorch, by repo path, unless overridden.
@@ -97,14 +104,19 @@ def render_config_links(meta: dict, /) -> str:
     return "<br>".join(links)
 
 
-def render_run_header(run: PublishedRun, /) -> str:
-    sha = run.meta["pytorch_sha"]
+def render_run_legend(runs: list[PublishedRun], /) -> str:
+    rows = "".join(
+        f"<tr><th>{escape(run.name)}</th>"
+        f'<td><a href="{PYTORCH_URL}/tree/{run.meta["pytorch_sha"]}/scripts/auto_pr_triage">'
+        f'pytorch@{run.meta["pytorch_sha"][:10]}</a></td>'
+        f"<td>{render_config_links(run.meta)}</td>"
+        f'<td>{escape(run.meta["model"])} ({escape(run.meta["effort"])}), {run.meta["reps"]} reps</td>'
+        f'<td>{escape(run.meta["published_at"])}</td></tr>'
+        for run in runs
+    )
     return (
-        f'<th>{escape(run.name)}<br><span class="sub">'
-        f'pipeline: <a href="{PYTORCH_URL}/tree/{sha}/scripts/auto_pr_triage">pytorch@{sha[:10]}</a><br>'
-        f"{render_config_links(run.meta)}<br>"
-        f'{escape(run.meta["model"])} ({escape(run.meta["effort"])}), {run.meta["reps"]} reps'
-        f'<br>published {escape(run.meta["published_at"])}</span></th>'
+        "<table><thead><tr><th>run</th><th>pipeline</th><th>config files used</th>"
+        f"<th>worker</th><th>published</th></tr></thead><tbody>{rows}</tbody></table>"
     )
 
 
@@ -170,42 +182,69 @@ def render_case_row(case: Case, /, *, owner: str, runs: list[PublishedRun]) -> s
     )
 
 
+def render_grid_cell(ratio: tuple[int, int] | None, /, *, higher_is_better: bool) -> str:
+    if ratio is None:
+        return '<span class="cell na">-</span>'
+    numerator, denominator = ratio
+    css = ratio_class(ratio, higher_is_better=higher_is_better)
+    rate = f"{numerator / denominator:.0%}" if denominator else "n/a"
+    return f'<span class="cell {css}">{rate}<span class="sub"> {numerator}/{denominator}</span></span>'
+
+
 def render_category(owner: str, /, *, cases: list[Case], runs: list[PublishedRun]) -> str:
-    headers = "".join(render_run_header(run) for run in runs)
-    metric_rows = "".join(
-        f"<tr><th>{label}</th>"
-        + "".join(
-            render_ratio_cell(
-                getattr(run.summaries[owner], field) if owner in run.summaries else None,
-                higher_is_better=higher_is_better,
-            )
-            for run in runs
-        )
-        + "</tr>"
-        for label, field, higher_is_better in (
-            ("precision on this suite", "precision", True),
-            ("recall (assign cases)", "recall", True),
-            ("false positive rate (not-assign cases)", "false_positive_rate", False),
-        )
-    )
+    """One expandable row: the category's scores per run, then its samples."""
+
     owner_cases = sorted(
         (case for case in cases if owner in case.expected),
         key=lambda case: (case.expected[owner], case.pr),
     )
+    cells = "".join(
+        render_grid_cell(
+            getattr(run.summaries[owner], field) if owner in run.summaries else None,
+            higher_is_better=higher_is_better,
+        )
+        for run in runs
+        for _, field, higher_is_better in METRICS
+    )
+    summary = (
+        f'<summary class="grid"><span class="cell name">{escape(owner)}</span>'
+        f'<span class="cell">{len(owner_cases) or "none yet"}</span>{cells}</summary>'
+    )
+    if not owner_cases:
+        return f'<details class="category empty">{summary}<p class="sub">No samples yet.</p></details>'
+    run_headers = "".join(f"<th>{escape(run.name)}</th>" for run in runs)
     case_rows = "".join(render_case_row(case, owner=owner, runs=runs) for case in owner_cases)
     return (
-        f"<h2>{escape(owner)}</h2>"
-        f"<table><thead><tr><th>metric</th>{headers}</tr></thead><tbody>{metric_rows}</tbody></table>"
-        f"<details><summary>{len(owner_cases)} samples</summary>"
+        f'<details class="category">{summary}'
         "<table><thead><tr><th>PR</th><th>expected</th><th>what this sample tests</th>"
-        f"{headers}<th>reason</th><th></th></tr></thead><tbody>{case_rows}</tbody></table>"
+        f"{run_headers}<th>reason</th><th></th></tr></thead><tbody>{case_rows}</tbody></table>"
         "</details>"
     )
 
 
+def render_category_table(*, owners: list[str], cases: list[Case], runs: list[PublishedRun]) -> str:
+    run_spans = "".join(
+        f'<span class="cell head" style="grid-column: span {len(METRICS)}">{escape(run.name)}</span>' for run in runs
+    )
+    metric_heads = "".join(f'<span class="cell head">{label}</span>' for run in runs for label, _, _ in METRICS)
+    header = (
+        f'<div class="grid header"><span class="cell head name">category</span>'
+        f'<span class="cell head">samples</span>{run_spans}</div>'
+        f'<div class="grid header"><span class="cell"></span><span class="cell"></span>{metric_heads}</div>'
+    )
+    columns = f"16rem 6rem repeat({len(METRICS) * len(runs)}, 6.5rem)"
+    rows = "".join(render_category(owner, cases=cases, runs=runs) for owner in owners)
+    return f'<div class="categories" style="--columns: {columns}">{header}{rows}</div>'
+
+
 def render_page(*, cases: list[Case], runs: list[PublishedRun]) -> str:
-    owners = sorted({owner for case in cases for owner in case.expected})
-    categories = "".join(render_category(owner, cases=cases, runs=runs) for owner in owners)
+    aliases = load_owner_aliases()
+    owners = sorted(
+        {owner for case in cases for owner in case.expected}
+        | {canonical_owner(o, aliases=aliases) for run in runs for o in run.meta.get("categories", ())}
+    )
+    categories = render_category_table(owners=owners, cases=cases, runs=runs)
+    legend = render_run_legend(runs)
     return f"""<!doctype html>
 <html lang="en">
 <head>
@@ -221,9 +260,21 @@ def render_page(*, cases: list[Case], runs: list[PublishedRun]) -> str:
   td.bad {{ background: #ffebe9; }}
   td.na {{ color: #656d76; }}
   td.reason {{ max-width: 26rem; }}
-  details {{ margin-bottom: 1.5rem; }}
-  summary {{ cursor: pointer; font-weight: 600; }}
-  td details {{ margin: 0; }}
+  .categories {{ margin: 1rem 0 2rem; }}
+  .grid {{ display: grid; grid-template-columns: var(--columns); border-bottom: 1px solid #d0d7de; }}
+  .grid .cell {{ padding: 0.4rem 0.6rem; }}
+  .grid .head {{ font-weight: 600; background: #f6f8fa; }}
+  .grid .name {{ font-weight: 600; }}
+  details.category > summary {{ cursor: pointer; list-style: none; }}
+  details.category > summary:hover {{ background: #f6f8fa; }}
+  details.category > summary .name::before {{ content: "\\25B8  "; color: #656d76; }}
+  details.category[open] > summary .name::before {{ content: "\\25BE  "; }}
+  details.category > table, details.category > p {{ margin: 0.5rem 0 1.5rem 1.5rem; }}
+  span.cell.good {{ background: #dafbe1; }}
+  span.cell.mixed {{ background: #fff8c5; }}
+  span.cell.bad {{ background: #ffebe9; }}
+  span.cell.na {{ color: #656d76; }}
+  td details summary {{ cursor: pointer; }}
   td details summary {{ font-weight: normal; color: #0969da; }}
   .sub {{ color: #656d76; font-size: 0.85em; font-weight: normal; }}
 </style>
@@ -237,9 +288,11 @@ the production pipeline, several times per sample. A run passes a sample when it
 assigns the categories expected and leaves out the ones expected absent; runs
 that fail validation are reported separately. <b>Precision on this suite</b>
 depends on how many samples of each kind the suite has, so compare configs
-rather than reading it as a production rate. Expand a category to see its
+rather than reading it as a production rate. Click a category to see its
 samples. <a href="{REPO_URL}">Source and labeling process</a>.</p>
 {categories}
+<h2>Runs</h2>
+{legend}
 </body>
 </html>
 """

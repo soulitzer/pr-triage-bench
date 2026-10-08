@@ -1,0 +1,25 @@
+{
+  "pytorch_sha": "3d970c5c42bc7ecbdbeadd9a16b2f50a5f8f77ad",
+  "config": null,
+  "model": "claude-sonnet-5",
+  "effort": "low",
+  "reps": 5,
+  "cases": [
+    191919,
+    197181,
+    197395,
+    198995,
+    200008,
+    200075
+  ],
+  "bench_sha": "44f10ef67deaa311560a5c5b40b3f8a4edc455a2",
+  "config_files": [],
+  "config_dirty": false,
+  "published_at": "2026-10-08 19:54 UTC",
+  "categories": [
+    "autograd",
+    "flex_attention",
+    "nn",
+    "testcase_refactoring"
+  ]
+}

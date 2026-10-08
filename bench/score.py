@@ -66,6 +66,12 @@ class CategorySummary:
     def failed_runs(self) -> int:
         return sum(r.failed_runs for r in self.results)
 
+    @property
+    def failure_rate(self) -> tuple[int, int]:
+        """Runs whose worker output failed validation, over all runs."""
+
+        return self.failed_runs, sum(r.judged_runs + r.failed_runs for r in self.results)
+
 
 def score_run(run_dir: Path, /, *, cases: list[Case]) -> dict[str, CategorySummary]:
     aliases = load_owner_aliases()

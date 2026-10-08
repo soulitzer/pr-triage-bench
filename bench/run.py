@@ -204,6 +204,11 @@ def main() -> None:
                 "effort": args.effort,
                 "reps": args.reps,
                 "cases": built,
+                "categories": sorted(
+                    json.loads(
+                        (settings.pipeline_root / ".github/auto-pr-triage/extra_ownership_metadata.json").read_text()
+                    )
+                ),
             }
             | describe_config_source(args.config),
             indent=2,

@@ -90,11 +90,13 @@ snapshots may need to be retaken.
 Per case and expected category, a run passes when it assigns a category the
 case expects assigned, or leaves out one expected absent. Per category:
 
-- **precision on this suite**: correct assignments over all assignments. It
-  depends on how many cases of each kind the suite has, so use it to compare
-  configs, not as a production rate;
 - **recall**: share of runs that assign the category on `assign` cases;
 - **false positive rate**: share of runs that assign it on `not_assign` cases.
+
+Neither depends on how many cases of each kind the suite has. Precision would,
+and it can be computed from the two, so it is not reported. Because cases are
+chosen to cover the description rather than sampled, use these to compare
+configs, not as production rates.
 
 Runs whose worker output fails validation are counted separately.
 

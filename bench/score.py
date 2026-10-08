@@ -2,10 +2,10 @@
 
 For each case and expected owner, a run passes when it assigns an owner the
 case expects assigned, or leaves out one it expects not assigned. Per
-category: recall on cases expecting it, false positive rate on cases expecting
-it absent, and precision on this suite (correct assignments over all
-assignments). Precision depends on how many cases of each kind the suite has.
-Runs whose worker output failed validation are counted separately.
+category: recall on cases expecting it, and false positive rate on cases
+expecting it absent. Neither depends on how many cases of each kind the suite
+has; precision would, so it is not reported. Runs whose worker output failed
+validation are counted separately.
 """
 
 from __future__ import annotations
@@ -56,11 +56,6 @@ class CategorySummary:
         return self._sum(expectation="not_assign", field="assigned"), self._sum(
             expectation="not_assign", field="judged_runs"
         )
-
-    @property
-    def precision(self) -> tuple[int, int]:
-        correct = self.recall[0]
-        return correct, correct + self.false_positive_rate[0]
 
     @property
     def failed_runs(self) -> int:
@@ -128,8 +123,7 @@ def main() -> None:
     summaries = score_run(run_dir, cases=load_cases())
     for summary in summaries.values():
         print(
-            f"\n{summary.owner}: precision on suite {format_ratio(summary.precision)}, "
-            f"recall {format_ratio(summary.recall)}, "
+            f"\n{summary.owner}: recall {format_ratio(summary.recall)}, "
             f"false positive rate {format_ratio(summary.false_positive_rate)}, "
             f"failed runs {summary.failed_runs}"
         )

@@ -22,9 +22,10 @@ from bench.score import CaseResult, CategorySummary, format_ratio, score_run
 RESULTS_DIR = REPO_ROOT / "results"
 PAGE_PATH = REPO_ROOT / "docs" / "index.html"
 PUBLISHED_FILES = ("results.jsonl", "meta.json")
+# The run's ownership metadata, kept so the page can show description changes.
+METADATA_FILE = "extra_ownership_metadata.json"
 # (label, CategorySummary field, higher is better), one column each per run.
 METRICS = (
-    ("precision", "precision", True),
     ("recall", "recall", True),
     ("false pos.", "false_positive_rate", False),
     ("failed", "failure_rate", False),
@@ -45,6 +46,14 @@ class PublishedRun:
     name: str
     meta: dict
     summaries: dict[str, CategorySummary]
+    descriptions: dict[str, str]
+
+    @property
+    def config_label(self) -> str:
+        if not self.meta["config"]:
+            return "checked in"
+        dirty = ", uncommitted changes" if self.meta.get("config_dirty") else ""
+        return f"override: {Path(self.meta['config']).name}{dirty}"
 
     def result(self, *, owner: str, pr: int) -> CaseResult | None:
         summary = self.summaries.get(owner)
@@ -52,13 +61,30 @@ class PublishedRun:
 
 
 def publish_run(run_dir: Path, /) -> None:
+    """Copy a run's sanitized files; republishing keeps the first publish time."""
+
     dest = RESULTS_DIR / run_dir.name
     dest.mkdir(parents=True, exist_ok=True)
+    previous = json.loads((dest / "meta.json").read_text()) if (dest / "meta.json").exists() else {}
     for name in PUBLISHED_FILES:
         shutil.copyfile(run_dir / name, dest / name)
+    shutil.copyfile(run_dir / "pipeline" / ".github" / "auto-pr-triage" / METADATA_FILE, dest / METADATA_FILE)
     meta = json.loads((dest / "meta.json").read_text())
-    meta.setdefault("published_at", datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"))
+    meta["published_at"] = previous.get("published_at") or datetime.now(timezone.utc).strftime(
+        "%Y-%m-%d %H:%M UTC"
+    )
     (dest / "meta.json").write_text(json.dumps(meta, indent=2) + "\n")
+
+
+def load_descriptions(run_dir: Path, /) -> dict[str, str]:
+    path = run_dir / METADATA_FILE
+    if not path.exists():
+        return {}
+    aliases = load_owner_aliases()
+    return {
+        canonical_owner(owner, aliases=aliases): entry["description"]
+        for owner, entry in json.loads(path.read_text()).items()
+    }
 
 
 def load_published_runs(*, cases: list[Case]) -> list[PublishedRun]:
@@ -67,6 +93,7 @@ def load_published_runs(*, cases: list[Case]) -> list[PublishedRun]:
             name=run_dir.name,
             meta=json.loads((run_dir / "meta.json").read_text()),
             summaries=score_run(run_dir, cases=cases),
+            descriptions=load_descriptions(run_dir),
         )
         for run_dir in sorted(RESULTS_DIR.iterdir())
         if (run_dir / "results.jsonl").exists()
@@ -165,11 +192,11 @@ def render_case_row(case: Case, /, *, owner: str, runs: list[PublishedRun]) -> s
     for run in runs:
         result = run.result(owner=owner, pr=case.pr)
         if result is None:
-            cells.append('<td class="na">not run</td>')
+            cells.append('<td class="na run-start">not run</td>')
             continue
         failed = f'<br><span class="sub">{result.failed_runs} failed</span>' if result.failed_runs else ""
         css = ratio_class((result.passed, result.judged_runs), higher_is_better=True)
-        cells.append(f'<td class="{css}">pass {result.passed}/{result.judged_runs}{failed}</td>')
+        cells.append(f'<td class="{css} run-start">pass {result.passed}/{result.judged_runs}{failed}</td>')
     return (
         f'<tr><td><a href="{PYTORCH_URL}/pull/{case.pr}">#{case.pr}</a><br>'
         f'<span class="sub">{escape(case.title)}</span></td>'
@@ -182,13 +209,21 @@ def render_case_row(case: Case, /, *, owner: str, runs: list[PublishedRun]) -> s
     )
 
 
-def render_grid_cell(ratio: tuple[int, int] | None, /, *, higher_is_better: bool) -> str:
+def render_grid_cell(ratio: tuple[int, int] | None, /, *, higher_is_better: bool, starts_run: bool) -> str:
+    edge = " run-start" if starts_run else ""
     if ratio is None:
-        return '<span class="cell na">-</span>'
+        return f'<span class="cell na{edge}">-</span>'
     numerator, denominator = ratio
     css = ratio_class(ratio, higher_is_better=higher_is_better)
     rate = f"{numerator / denominator:.0%}" if denominator else "n/a"
-    return f'<span class="cell {css}">{rate}<span class="sub"> {numerator}/{denominator}</span></span>'
+    return f'<span class="cell {css}{edge}">{rate}<span class="sub"> {numerator}/{denominator}</span></span>'
+
+
+def render_run_heading(run: PublishedRun, /) -> str:
+    return (
+        f'{escape(run.name)}<br><span class="sub">config: {escape(run.config_label)}<br>'
+        f'pipeline: pytorch@{run.meta["pytorch_sha"][:10]}</span>'
+    )
 
 
 def render_category(owner: str, /, *, cases: list[Case], runs: list[PublishedRun]) -> str:
@@ -202,9 +237,10 @@ def render_category(owner: str, /, *, cases: list[Case], runs: list[PublishedRun
         render_grid_cell(
             getattr(run.summaries[owner], field) if owner in run.summaries else None,
             higher_is_better=higher_is_better,
+            starts_run=index == 0,
         )
         for run in runs
-        for _, field, higher_is_better in METRICS
+        for index, (_, field, higher_is_better) in enumerate(METRICS)
     )
     summary = (
         f'<summary class="grid"><span class="cell name">{escape(owner)}</span>'
@@ -212,7 +248,7 @@ def render_category(owner: str, /, *, cases: list[Case], runs: list[PublishedRun
     )
     if not owner_cases:
         return f'<details class="category empty">{summary}<p class="sub">No samples yet.</p></details>'
-    run_headers = "".join(f"<th>{escape(run.name)}</th>" for run in runs)
+    run_headers = "".join(f'<th class="run-start">{render_run_heading(run)}</th>' for run in runs)
     case_rows = "".join(render_case_row(case, owner=owner, runs=runs) for case in owner_cases)
     return (
         f'<details class="category">{summary}'
@@ -224,9 +260,14 @@ def render_category(owner: str, /, *, cases: list[Case], runs: list[PublishedRun
 
 def render_category_table(*, owners: list[str], cases: list[Case], runs: list[PublishedRun]) -> str:
     run_spans = "".join(
-        f'<span class="cell head" style="grid-column: span {len(METRICS)}">{escape(run.name)}</span>' for run in runs
+        f'<span class="cell head run-start" style="grid-column: span {len(METRICS)}">{render_run_heading(run)}</span>'
+        for run in runs
     )
-    metric_heads = "".join(f'<span class="cell head">{label}</span>' for run in runs for label, _, _ in METRICS)
+    metric_heads = "".join(
+        f'<span class="cell head{" run-start" if index == 0 else ""}">{label}</span>'
+        for run in runs
+        for index, (label, _, _) in enumerate(METRICS)
+    )
     header = (
         f'<div class="grid header"><span class="cell head name">category</span>'
         f'<span class="cell head">samples</span>{run_spans}</div>'
@@ -237,6 +278,135 @@ def render_category_table(*, owners: list[str], cases: list[Case], runs: list[Pu
     return f'<div class="categories" style="--columns: {columns}">{header}{rows}</div>'
 
 
+COMPARE_SCRIPT = """
+const data = JSON.parse(document.getElementById("bench-data").textContent);
+const pickA = document.getElementById("run-a");
+const pickB = document.getElementById("run-b");
+data.runs.forEach((run, i) => {
+  pickA.add(new Option(run.name, i));
+  pickB.add(new Option(run.name, i));
+});
+pickA.value = Math.max(0, data.runs.length - 2);
+pickB.value = data.runs.length - 1;
+
+function node(tag, text, cls) {
+  const e = document.createElement(tag);
+  if (text !== undefined) e.textContent = text;
+  if (cls) e.className = cls;
+  return e;
+}
+function row(cells) {
+  const tr = node("tr");
+  cells.forEach(c => tr.append(c instanceof Node ? c : node("td", c)));
+  return tr;
+}
+function table(headers, rows) {
+  const t = node("table");
+  const head = node("tr");
+  headers.forEach(h => head.append(node("th", h)));
+  t.append(head, ...rows);
+  return t;
+}
+function rate(r) { return r && r[1] ? r[0] / r[1] : null; }
+function fmt(r) { return !r ? "-" : r[1] ? Math.round(100 * r[0] / r[1]) + "% (" + r[0] + "/" + r[1] + ")" : "n/a"; }
+function link(pr) {
+  const td = node("td");
+  const a = node("a", "#" + pr);
+  a.href = "https://github.com/pytorch/pytorch/pull/" + pr;
+  td.append(a, node("br"), node("span", data.cases[pr].title, "sub"));
+  return td;
+}
+function same(x, y) { return x === y ? " (same)" : ""; }
+
+function render() {
+  const a = data.runs[pickA.value];
+  const b = data.runs[pickB.value];
+  const out = document.getElementById("compare-out");
+  out.replaceChildren();
+
+  out.append(node("h3", "What differs"));
+  const differs = node("ul");
+  differs.append(node("li", "pipeline: pytorch@" + a.pipeline_sha.slice(0, 10) + " vs pytorch@" + b.pipeline_sha.slice(0, 10) + same(a.pipeline_sha, b.pipeline_sha)));
+  differs.append(node("li", "config: " + a.config_label + " vs " + b.config_label + same(a.config_label, b.config_label)));
+  out.append(differs);
+  const owners = [...new Set([...Object.keys(a.descriptions), ...Object.keys(b.descriptions)])].sort();
+  const changed = owners.filter(o => a.descriptions[o] !== b.descriptions[o]);
+  if (changed.length) {
+    out.append(table(["category", "description in " + a.name, "description in " + b.name],
+      changed.map(o => row([o, node("td", a.descriptions[o] || "(not defined)", "desc"), node("td", b.descriptions[o] || "(not defined)", "desc")]))));
+  } else {
+    out.append(node("p", "No category descriptions differ.", "sub"));
+  }
+
+  out.append(node("h3", "Metrics"));
+  const metricRows = [];
+  const metricOwners = [...new Set([...Object.keys(a.metrics), ...Object.keys(b.metrics)])].sort();
+  metricOwners.forEach(o => data.metrics.forEach(([label, field, higherIsBetter]) => {
+    const ra = (a.metrics[o] || {})[field];
+    const rb = (b.metrics[o] || {})[field];
+    const delta = rate(ra) === null || rate(rb) === null ? null : Math.round(100 * (rate(rb) - rate(ra)));
+    const cls = !delta ? "" : (delta > 0) === higherIsBetter ? "better" : "worse";
+    const shown = delta === null ? "-" : (delta > 0 ? "+" : "") + delta + " pts";
+    metricRows.push(row([o, label, fmt(ra), fmt(rb), node("td", shown, cls)]));
+  }));
+  out.append(table(["category", "metric", a.name, b.name, "change"], metricRows));
+
+  out.append(node("h3", "Samples whose result changed"));
+  const sampleRows = [];
+  const sampleOwners = [...new Set([...Object.keys(a.samples), ...Object.keys(b.samples)])].sort();
+  sampleOwners.forEach(o => {
+    const prs = [...new Set([...Object.keys(a.samples[o] || {}), ...Object.keys(b.samples[o] || {})])].sort();
+    prs.forEach(pr => {
+      const sa = (a.samples[o] || {})[pr];
+      const sb = (b.samples[o] || {})[pr];
+      if (JSON.stringify(sa) === JSON.stringify(sb)) return;
+      const show = s => !s ? "not run" : "pass " + s[0] + "/" + s[1] + (s[2] ? ", " + s[2] + " failed" : "");
+      sampleRows.push(row([o, link(pr), data.cases[pr].expected[o].replace("_", " "), show(sa), show(sb)]));
+    });
+  });
+  out.append(sampleRows.length ? table(["category", "PR", "expected", a.name, b.name], sampleRows) : node("p", "No sample results differ.", "sub"));
+}
+pickA.onchange = render;
+pickB.onchange = render;
+render();
+"""
+
+
+def render_compare_section(*, cases: list[Case], runs: list[PublishedRun]) -> str:
+    """Two run pickers and the data the comparison script renders from."""
+
+    data = {
+        "metrics": [[label, field, higher] for label, field, higher in METRICS],
+        "cases": {
+            case.pr: {"title": case.title, "expected": case.expected} for case in cases
+        },
+        "runs": [
+            {
+                "name": run.name,
+                "pipeline_sha": run.meta["pytorch_sha"],
+                "config_label": run.config_label,
+                "descriptions": run.descriptions,
+                "metrics": {
+                    owner: {field: getattr(summary, field) for _, field, _ in METRICS}
+                    for owner, summary in run.summaries.items()
+                },
+                "samples": {
+                    owner: {r.pr: [r.passed, r.judged_runs, r.failed_runs] for r in summary.results}
+                    for owner, summary in run.summaries.items()
+                },
+            }
+            for run in runs
+        ],
+    }
+    payload = json.dumps(data).replace("</", "<\\/")
+    return (
+        '<h2>Compare runs</h2><p>Run A <select id="run-a"></select> against run B '
+        '<select id="run-b"></select></p><div id="compare-out"></div>'
+        f'<script type="application/json" id="bench-data">{payload}</script>'
+        f"<script>{COMPARE_SCRIPT}</script>"
+    )
+
+
 def render_page(*, cases: list[Case], runs: list[PublishedRun]) -> str:
     aliases = load_owner_aliases()
     owners = sorted(
@@ -245,6 +415,7 @@ def render_page(*, cases: list[Case], runs: list[PublishedRun]) -> str:
     )
     categories = render_category_table(owners=owners, cases=cases, runs=runs)
     legend = render_run_legend(runs)
+    compare = render_compare_section(cases=cases, runs=runs) if len(runs) >= 2 else ""
     return f"""<!doctype html>
 <html lang="en">
 <head>
@@ -275,6 +446,10 @@ def render_page(*, cases: list[Case], runs: list[PublishedRun]) -> str:
   span.cell.bad {{ background: #ffebe9; }}
   span.cell.na {{ color: #656d76; }}
   td details summary {{ cursor: pointer; }}
+  .run-start {{ border-left: 3px solid #57606a !important; }}
+  td.better {{ background: #dafbe1; }}
+  td.worse {{ background: #ffebe9; }}
+  td.desc {{ max-width: 34rem; font-size: 0.9em; }}
   td details summary {{ font-weight: normal; color: #0969da; }}
   .sub {{ color: #656d76; font-size: 0.85em; font-weight: normal; }}
 </style>
@@ -284,13 +459,16 @@ def render_page(*, cases: list[Case], runs: list[PublishedRun]) -> str:
 <p>Regression suite for PyTorch's Auto PR Triage owner routing. Each sample is a
 PR whose inputs were snapshotted, with the owner categories a person says the
 bot should or should not assign. Every config run replays the snapshots through
-the production pipeline, several times per sample. A run passes a sample when it
+the production pipeline, several times per sample. Each run is a pipeline
+commit plus a config; runs at the same commit differ only in config. A run passes a sample when it
 assigns the categories expected and leaves out the ones expected absent; runs
-that fail validation are reported separately. <b>Precision on this suite</b>
-depends on how many samples of each kind the suite has, so compare configs
-rather than reading it as a production rate. Click a category to see its
-samples. <a href="{REPO_URL}">Source and labeling process</a>.</p>
+that fail validation are reported separately. <b>Recall</b> is the share of
+runs that assign a category on samples expecting it; <b>false positive rate</b>
+is the share that assign it on samples expecting it absent. The samples are
+chosen, not sampled, so compare configs with these rather than reading them as
+production rates. Click a category to see its samples. <a href="{REPO_URL}">Source and labeling process</a>.</p>
 {categories}
+{compare}
 <h2>Runs</h2>
 {legend}
 </body>

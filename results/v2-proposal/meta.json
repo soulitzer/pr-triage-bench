@@ -1,6 +1,6 @@
 {
   "pytorch_sha": "3d970c5c42bc7ecbdbeadd9a16b2f50a5f8f77ad",
-  "config": null,
+  "config": "configs/v2-accelerator-test-refactoring",
   "model": "claude-sonnet-5",
   "effort": "low",
   "reps": 5,
@@ -13,13 +13,16 @@
     200075
   ],
   "bench_sha": "44f10ef67deaa311560a5c5b40b3f8a4edc455a2",
-  "config_files": [],
+  "config_files": [
+    "extra_ownership_metadata.json",
+    "team_members.json"
+  ],
   "config_dirty": false,
-  "published_at": "2026-10-08 19:54 UTC",
   "categories": [
+    "accelerator_test_refactoring",
     "autograd",
     "flex_attention",
-    "nn",
-    "testcase_refactoring"
-  ]
+    "nn"
+  ],
+  "published_at": "2026-10-08 19:54 UTC"
 }

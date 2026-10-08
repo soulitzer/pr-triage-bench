@@ -5,7 +5,7 @@ owner routing. Dashboard: https://soulitzer.github.io/pr-triage-bench/
 
 Each case is a PR whose inputs were snapshotted, with the owner categories a
 person says the bot should or should not assign. A run replays every snapshot
-through the production pipeline with a given config, several times per case.
+through the production pipeline at one pytorch commit, several times per case.
 Cases are chosen to cover each part of a category's description (what it owns
 and what it excludes), so the suite is not a random sample.
 
@@ -30,9 +30,8 @@ case. Intake facts are recorded as an open, unhandled PR so closed or triaged
 PRs can be cases; the worker does not see these facts.
 
 The config side (`worker.md`, `CODEOWNERS`, and `.github/auto-pr-triage/*.json`)
-is not part of a case. Each run takes it from the pytorch commit it is given,
-plus any override, and the dashboard links every file a run used to that
-commit.
+is not part of a case. Each run takes it, with the pipeline, from one pytorch
+commit, and the dashboard links every file a run used at that commit.
 
 Owner categories that get renamed are mapped in `cases/owner_aliases.json`.
 
@@ -60,27 +59,29 @@ boundary of the description, over more of the same kind.
 
 Requires `gh` (authenticated), the `claude` CLI, and Python 3.10+.
 
+A run is fully described by one pytorch commit: the pipeline and its config
+both come from it. To try a change to a description, the worker prompt, or the
+pipeline, push it as a pytorch PR (for example with ghstack) and run on the PR.
+
 ```
-# Pipeline and config as of a pytorch commit:
-python -m bench.run --name main --pytorch-sha <sha> --reps 5
+# Current behavior, at a main commit:
+python -m bench.run --name main-<sha> --pytorch-sha <sha>
 
-# Same pipeline with a proposed config (files replace .github/auto-pr-triage/*):
-python -m bench.run --name proposal --pytorch-sha <sha> --config configs/<dir> --reps 5
+# A proposal, at the PR's head commit:
+python -m bench.run --name pr-<number> --pr <number>
 
-python -m bench.score runs/main
+python -m bench.score runs/pr-<number>
 ```
 
 `bench.run` fetches `scripts/auto_pr_triage`, `CODEOWNERS`, and
-`.github/auto-pr-triage/*.json` at the given commit. For each case it builds the
+`.github/auto-pr-triage/*.json` at that commit. For each case it builds the
 worker input from the snapshot with the pipeline's `build_ownership_input.py`,
 then runs the tool-less worker (same flags as
 `.github/actions/auto-pr-triage/action.yml`, `claude-sonnet-5` at effort
-`low`) and validation. It never writes to GitHub. Planning (triage vs. routed
-untriaged) is not run, since it depends on live reviewer state.
-
-Commit config overrides before a run you will publish: the run records this
-repo's commit so the dashboard can link the override files, and flags runs made
-with uncommitted changes.
+`low`, 5 reps by default) and validation. It never writes to GitHub. Planning
+(triage vs. routed untriaged) is not run, since it depends on live reviewer
+state. A PR run records the PR number and the head commit it used; if the PR
+is updated, run it again under a new name.
 
 If the pipeline changes the format of the intake result or file list, old
 snapshots may need to be retaken.
@@ -108,5 +109,8 @@ python -m bench.publish runs/main runs/proposal
 
 copies each run's sanitized `results.jsonl` and `meta.json` into
 `results/<name>/` (committed) and rebuilds `docs/index.html`, which GitHub
-Pages serves from `main`. Each category shows its scores per run and expands
-into its samples. Run with no arguments to rebuild after changing cases.
+Pages serves from `main`. Two pickers choose runs A and B: the category table
+and its expandable samples show those two runs, and the comparison below shows
+what differs (with a GitHub diff link between the two commits and a word diff
+of changed descriptions), each metric's change, and samples whose result
+changed. Run with no arguments to rebuild after changing cases.

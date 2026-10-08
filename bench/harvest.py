@@ -299,7 +299,7 @@ def main() -> None:
     if args.add and not args.expect:
         parser.error("--add needs at least one --expect <category>=<assign|not_assign>")
     pytorch_sha = gh_api(f"repos/{REPOSITORY}/commits/main")["sha"]
-    prepare_pipeline(pytorch_sha=pytorch_sha, config_dir=None, dest=SNAPSHOT_PIPELINE_DIR / pytorch_sha)
+    prepare_pipeline(pytorch_sha=pytorch_sha, dest=SNAPSHOT_PIPELINE_DIR / pytorch_sha)
     PENDING_DIR.mkdir(parents=True, exist_ok=True)
     for pr_number in args.add:
         write_pending(draft_hand_picked(pr_number, expected=dict(args.expect)), pytorch_sha=pytorch_sha)

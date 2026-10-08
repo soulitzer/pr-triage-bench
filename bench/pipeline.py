@@ -41,17 +41,11 @@ def fetch_pipeline(pytorch_sha: str, /) -> Path:
     return root
 
 
-def prepare_pipeline(*, pytorch_sha: str, config_dir: Path | None, dest: Path) -> Path:
-    """Copy the pipeline to dest, apply config overrides, and admit handled PRs.
-
-    Files in config_dir replace the same-named files in .github/auto-pr-triage.
-    """
+def prepare_pipeline(*, pytorch_sha: str, dest: Path) -> Path:
+    """Copy the pipeline at pytorch_sha to dest and admit already-handled PRs."""
 
     shutil.rmtree(dest, ignore_errors=True)
     shutil.copytree(fetch_pipeline(pytorch_sha), dest)
-    if config_dir is not None:
-        for override in sorted(config_dir.glob("*.json")):
-            shutil.copyfile(override, dest / CONFIG_DIR / override.name)
     intake = dest / PIPELINE_DIR / "assess_intake.py"
     source = intake.read_text()
     if source.count(HANDLED_CHECK) != 1:

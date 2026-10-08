@@ -119,7 +119,7 @@ def main() -> None:
     parser.add_argument("run_dir", type=Path)
     run_dir = parser.parse_args().run_dir
     meta = json.loads((run_dir / "meta.json").read_text())
-    print({key: meta[key] for key in ("pytorch_sha", "config", "model", "effort", "reps")})
+    print({key: meta[key] for key in ("pytorch_sha", "pr", "model", "effort", "reps")})
     summaries = score_run(run_dir, cases=load_cases())
     for summary in summaries.values():
         print(

@@ -1,0 +1,23 @@
+{
+  "pytorch_sha": "0be369793557163ef6da98a0bb5a7337d5ccf664",
+  "pr": 200317,
+  "pr_title": "[auto-pr-triage] Narrow testcase_refactoring ownership and rename it accelerator_test_refactoring",
+  "model": "claude-sonnet-5",
+  "effort": "low",
+  "reps": 5,
+  "cases": [
+    191919,
+    197181,
+    197395,
+    198995,
+    200008,
+    200075
+  ],
+  "categories": [
+    "accelerator_test_refactoring",
+    "autograd",
+    "flex_attention",
+    "nn"
+  ],
+  "published_at": "2026-10-08 20:31 UTC"
+}

@@ -1,7 +1,11 @@
 """Run the Auto PR Triage worker on every case's snapshot and record sanitized results.
 
+A run is fully described by one pytorch commit: the pipeline and its config
+(worker.md, CODEOWNERS, .github/auto-pr-triage/*.json) both come from it. To
+try a config change, push it as a pytorch PR and run with --pr.
+
 For each case, builds the worker input from the snapshot with the pipeline's
-build_ownership_input.py and the config under test, then runs the tool-less
+build_ownership_input.py, then runs the tool-less
 worker and validation (as in .github/actions/auto-pr-triage/action.yml) once
 per rep. Nothing is read from the live PR and nothing is written to GitHub.
 Run outputs hold PR content and stay under runs/ (git-ignored); results.jsonl
@@ -22,6 +26,7 @@ from pathlib import Path
 from typing import Any
 
 from bench.cases import CASES_DIR, FILES_FILE, INTAKE_FILE, REPO_ROOT, SNAPSHOT_DIR, load_cases
+from bench.github import REPOSITORY, gh_api
 from bench.pipeline import PIPELINE_DIR, prepare_pipeline
 
 
@@ -137,31 +142,31 @@ def run_rep(pr: int, /, *, rep: int, settings: RunSettings) -> dict[str, Any]:
     return summarize_rep(pr=pr, rep=rep, rep_dir=rep_dir)
 
 
-def describe_config_source(config_dir: Path | None, /) -> dict[str, Any]:
-    """Record this repo's commit so the dashboard can link override files."""
+@dataclass(frozen=True)
+class RunSource:
+    """The pytorch commit a run takes its pipeline and config from."""
 
-    git = ["git", "-C", str(REPO_ROOT)]
-    bench_sha = subprocess.run(git + ["rev-parse", "HEAD"], check=True, capture_output=True, text=True).stdout.strip()
-    if config_dir is None:
-        return {"bench_sha": bench_sha, "config_files": [], "config_dirty": False}
-    status = subprocess.run(
-        git + ["status", "--porcelain", "--", str(config_dir.resolve())],
-        check=True,
-        capture_output=True,
-        text=True,
-    ).stdout
-    return {
-        "bench_sha": bench_sha,
-        "config_files": sorted(path.name for path in config_dir.glob("*.json")),
-        "config_dirty": bool(status.strip()),
-    }
+    pytorch_sha: str
+    pr: int | None
+    pr_title: str | None
+
+    def to_meta(self) -> dict[str, Any]:
+        return {"pytorch_sha": self.pytorch_sha, "pr": self.pr, "pr_title": self.pr_title}
+
+
+def resolve_source(*, pytorch_sha: str | None, pr: int | None) -> RunSource:
+    if pr is None:
+        return RunSource(pytorch_sha=gh_api(f"repos/{REPOSITORY}/commits/{pytorch_sha}")["sha"], pr=None, pr_title=None)
+    pull = gh_api(f"repos/{REPOSITORY}/pulls/{pr}")
+    return RunSource(pytorch_sha=pull["head"]["sha"], pr=pr, pr_title=pull["title"])
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--name", required=True, help="output directory under runs/")
-    parser.add_argument("--pytorch-sha", required=True, help="pytorch commit to take the pipeline from")
-    parser.add_argument("--config", type=Path, help="directory of .github/auto-pr-triage overrides")
+    source = parser.add_mutually_exclusive_group(required=True)
+    source.add_argument("--pytorch-sha", help="pytorch commit (or branch) to take the pipeline and config from")
+    source.add_argument("--pr", type=int, help="pytorch PR whose head commit to take them from")
     parser.add_argument("--reps", type=int, default=5)
     parser.add_argument("--jobs", type=int, default=8)
     parser.add_argument("--prs", type=int, nargs="*", help="defaults to every case")
@@ -175,10 +180,9 @@ def main() -> None:
     prs = args.prs or [case.pr for case in load_cases()]
     out_dir = RUNS_DIR / args.name
     out_dir.mkdir(parents=True, exist_ok=True)
+    source = resolve_source(pytorch_sha=args.pytorch_sha, pr=args.pr)
     settings = RunSettings(
-        pipeline_root=prepare_pipeline(
-            pytorch_sha=args.pytorch_sha, config_dir=args.config, dest=out_dir / "pipeline"
-        ),
+        pipeline_root=prepare_pipeline(pytorch_sha=source.pytorch_sha, dest=out_dir / "pipeline"),
         out_dir=out_dir,
         model=args.model,
         effort=args.effort,
@@ -197,9 +201,8 @@ def main() -> None:
     (out_dir / "results.jsonl").write_text("".join(json.dumps(r) + "\n" for r in records))
     (out_dir / "meta.json").write_text(
         json.dumps(
-            {
-                "pytorch_sha": args.pytorch_sha,
-                "config": str(args.config) if args.config else None,
+            source.to_meta()
+            | {
                 "model": args.model,
                 "effort": args.effort,
                 "reps": args.reps,
@@ -209,8 +212,7 @@ def main() -> None:
                         (settings.pipeline_root / ".github/auto-pr-triage/extra_ownership_metadata.json").read_text()
                     )
                 ),
-            }
-            | describe_config_source(args.config),
+            },
             indent=2,
         )
         + "\n"

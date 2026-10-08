@@ -50,11 +50,20 @@ class PublishedRun:
     descriptions: dict[str, str]
 
     @property
-    def config_label(self) -> str:
-        if not self.meta["config"]:
-            return "checked in"
-        dirty = ", uncommitted changes" if self.meta.get("config_dirty") else ""
-        return f"override: {Path(self.meta['config']).name}{dirty}"
+    def source_label(self) -> str:
+        """Where the pipeline and config came from: a PR's head or a commit."""
+
+        sha = self.meta["pytorch_sha"][:7]
+        return f"PR #{self.meta['pr']} @ {sha}" if self.meta.get("pr") else f"pytorch@{sha}"
+
+    @property
+    def source_html(self) -> str:
+        sha = self.meta["pytorch_sha"]
+        commit = f'<a href="{PYTORCH_URL}/commit/{sha}">{sha[:7]}</a>'
+        if not self.meta.get("pr"):
+            return f"pytorch@{commit}"
+        pr = self.meta["pr"]
+        return f'<a href="{PYTORCH_URL}/pull/{pr}">PR #{pr}</a> @ {commit}'
 
     def result(self, *, owner: str, pr: int) -> CaseResult | None:
         summary = self.summaries.get(owner)
@@ -119,33 +128,27 @@ def render_ratio_cell(ratio: tuple[int, int] | None, /, *, higher_is_better: boo
 
 
 def render_config_links(meta: dict, /) -> str:
-    """Link every config file the run used to the exact commit it came from."""
+    """Link every config file the run used at the commit it came from."""
 
-    links = []
-    for name, path in PYTORCH_CONFIG_PATHS.items():
-        if name in meta.get("config_files", ()):
-            config_dir = Path(meta["config"]).name
-            url = f"{REPO_URL}/blob/{meta['bench_sha']}/configs/{config_dir}/{name}"
-            note = " (override, uncommitted changes)" if meta.get("config_dirty") else " (override)"
-        else:
-            url = f"{PYTORCH_URL}/blob/{meta['pytorch_sha']}/{path}"
-            note = ""
-        links.append(f'<a href="{url}">{escape(name)}</a>{note}')
-    return "<br>".join(links)
+    return "<br>".join(
+        f'<a href="{PYTORCH_URL}/blob/{meta["pytorch_sha"]}/{path}">{escape(name)}</a>'
+        for name, path in PYTORCH_CONFIG_PATHS.items()
+    )
 
 
 def render_run_legend(runs: list[PublishedRun], /) -> str:
     rows = "".join(
         f"<tr><th>{escape(run.name)}</th>"
-        f'<td><a href="{PYTORCH_URL}/tree/{run.meta["pytorch_sha"]}/scripts/auto_pr_triage">'
-        f'pytorch@{run.meta["pytorch_sha"][:10]}</a></td>'
+        f"<td>{run.source_html}"
+        + (f'<br><span class="sub">{escape(run.meta["pr_title"])}</span>' if run.meta.get("pr_title") else "")
+        + "</td>"
         f"<td>{render_config_links(run.meta)}</td>"
         f'<td>{escape(run.meta["model"])} ({escape(run.meta["effort"])}), {run.meta["reps"]} reps</td>'
         f'<td>{escape(run.meta["published_at"])}</td></tr>'
         for run in runs
     )
     return (
-        "<table><thead><tr><th>run</th><th>pipeline</th><th>config files used</th>"
+        "<table><thead><tr><th>run</th><th>pipeline and config from</th><th>config files used</th>"
         f"<th>worker</th><th>published</th></tr></thead><tbody>{rows}</tbody></table>"
     )
 
@@ -231,8 +234,7 @@ def render_grid_cell(
 
 def render_run_heading(run: PublishedRun, /) -> str:
     return (
-        f'<span class="slot"></span>{escape(run.name)}<br><span class="sub">config: {escape(run.config_label)}<br>'
-        f'pipeline: pytorch@{run.meta["pytorch_sha"][:10]}</span>'
+        f'<span class="slot"></span>{escape(run.name)}<br><span class="sub">{run.source_html}</span>'
     )
 
 
@@ -390,8 +392,14 @@ function render() {
 
   out.append(node("h3", "What differs"));
   const differs = node("ul");
-  differs.append(node("li", "pipeline: pytorch@" + a.pipeline_sha.slice(0, 10) + " vs pytorch@" + b.pipeline_sha.slice(0, 10) + same(a.pipeline_sha, b.pipeline_sha)));
-  differs.append(node("li", "config: " + a.config_label + " vs " + b.config_label + same(a.config_label, b.config_label)));
+  differs.append(node("li", "pipeline and config: " + a.source_label + " vs " + b.source_label + same(a.sha, b.sha)));
+  if (a.sha !== b.sha) {
+    const item = node("li");
+    const diffLink = node("a", "all file changes between the two commits on GitHub");
+    diffLink.href = "https://github.com/pytorch/pytorch/compare/" + a.sha + "..." + b.sha;
+    item.append(diffLink);
+    differs.append(item);
+  }
   out.append(differs);
   const owners = [...new Set([...Object.keys(a.descriptions), ...Object.keys(b.descriptions)])].sort();
   const changed = owners.filter(o => a.descriptions[o] !== b.descriptions[o]);
@@ -447,8 +455,8 @@ def render_compare_section(*, cases: list[Case], runs: list[PublishedRun]) -> st
         "runs": [
             {
                 "name": run.name,
-                "pipeline_sha": run.meta["pytorch_sha"],
-                "config_label": run.config_label,
+                "sha": run.meta["pytorch_sha"],
+                "source_label": run.source_label,
                 "descriptions": run.descriptions,
                 "metrics": {
                     owner: {field: getattr(summary, field) for _, field, _ in METRICS}
@@ -533,8 +541,9 @@ def render_page(*, cases: list[Case], runs: list[PublishedRun]) -> str:
 <p>Regression suite for PyTorch's Auto PR Triage owner routing. Each sample is a
 PR whose inputs were snapshotted, with the owner categories a person says the
 bot should or should not assign. Every config run replays the snapshots through
-the production pipeline, several times per sample. Each run is a pipeline
-commit plus a config; runs at the same commit differ only in config. A run passes a sample when it
+the production pipeline, several times per sample. Each run takes the pipeline
+and its config from one pytorch commit, usually <code>main</code> or the head of
+a PR that proposes a change. A run passes a sample when it
 assigns the categories expected and leaves out the ones expected absent; runs
 that fail validation are reported separately. <b>Recall</b> is the share of
 runs that assign a category on samples expecting it; <b>false positive rate</b>

@@ -1,0 +1,4 @@
+# Pipeline downloads and run outputs (run outputs contain PR content).
+cache/
+runs/
+__pycache__/

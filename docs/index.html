@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>pr-triage-bench</title>
+<style>
+  body { font-family: system-ui, sans-serif; margin: 2rem; color: #1f2328; max-width: 1200px; }
+  table { border-collapse: collapse; margin: 1rem 0 2rem; }
+  th, td { border: 1px solid #d0d7de; padding: 0.4rem 0.7rem; text-align: left; vertical-align: top; }
+  thead th { background: #f6f8fa; }
+  td.good { background: #dafbe1; }
+  td.bad { background: #ffebe9; }
+  td.na { color: #656d76; }
+  td.reason { max-width: 32rem; }
+  .sub { color: #656d76; font-size: 0.85em; font-weight: normal; }
+</style>
+</head>
+<body>
+<h1>pr-triage-bench</h1>
+<p>Reruns PyTorch's Auto PR Triage ownership pipeline on PRs a person marked
+<code>bot-mislabeled</code>. Each cell is the <b>repeat-mistake rate</b>: of the
+runs that passed validation, how often the config assigned the owner category
+again after a person judged it wrong. Lower is better. This is a regression
+check, not precision: the dataset has no confirmed-correct cases yet.
+<a href="https://github.com/soulitzer/pr-triage-bench">Source and labeling process</a>.</p>
+<h2>By owner category</h2>
+<table><thead><tr><th>category</th><th>main-3d970c5<br><span class="sub"><a href="https://github.com/pytorch/pytorch/tree/3d970c5c42bc7ecbdbeadd9a16b2f50a5f8f77ad">3d970c5c42</a> | config: as of commit<br>claude-sonnet-5 (low), 5 reps<br>2026-10-08 19:17 UTC</span></th><th>v2-3d970c5<br><span class="sub"><a href="https://github.com/pytorch/pytorch/tree/3d970c5c42bc7ecbdbeadd9a16b2f50a5f8f77ad">3d970c5c42</a> | config: v2-accelerator-test-refactoring<br>claude-sonnet-5 (low), 5 reps<br>2026-10-08 19:17 UTC</span></th></tr></thead><tbody><tr><th>accelerator_test_refactoring</th><td class="bad">22% (2/9)<br><span class="sub">1 failed</span></td><td class="good">0% (0/8)<br><span class="sub">2 failed</span></td></tr></tbody></table>
+<h2>By labeled PR</h2>
+<table><thead><tr><th>PR</th><th>wrong category</th><th>reason</th><th>main-3d970c5<br><span class="sub"><a href="https://github.com/pytorch/pytorch/tree/3d970c5c42bc7ecbdbeadd9a16b2f50a5f8f77ad">3d970c5c42</a> | config: as of commit<br>claude-sonnet-5 (low), 5 reps<br>2026-10-08 19:17 UTC</span></th><th>v2-3d970c5<br><span class="sub"><a href="https://github.com/pytorch/pytorch/tree/3d970c5c42bc7ecbdbeadd9a16b2f50a5f8f77ad">3d970c5c42</a> | config: v2-accelerator-test-refactoring<br>claude-sonnet-5 (low), 5 reps<br>2026-10-08 19:17 UTC</span></th></tr></thead>
+<tbody><tr><th><a href="https://github.com/pytorch/pytorch/pull/200008">#200008</a></th><td>accelerator_test_refactoring</td><td class="reason">Quantized CPU engine change (X86/FBGEMM engines no longer registered on AArch64) that the quantization codepath owners cover. testcase_refactoring matched only a supporting FBGEMM skip helper in torch/testing/_internal/common_quantization.py. Reviewer fffrog replaced with vkuzo and andrewor14.<br><span class="sub">labeled by soulitzer on 2026-10-08</span></td><td class="bad">50% (2/4)<br><span class="sub">1 failed</span></td><td class="good">0% (0/4)<br><span class="sub">1 failed</span></td></tr><tr><th><a href="https://github.com/pytorch/pytorch/pull/200075">#200075</a></th><td>accelerator_test_refactoring</td><td class="reason">CUDA-specific test fix in inductor tests, not test refactoring. Reviewer fffrog replaced with eellison.<br><span class="sub">labeled by soulitzer on 2026-10-08</span></td><td class="good">0% (0/5)</td><td class="good">0% (0/4)<br><span class="sub">1 failed</span></td></tr></tbody></table>
+</body>
+</html>

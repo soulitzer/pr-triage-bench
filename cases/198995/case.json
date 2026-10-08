@@ -1,14 +1,20 @@
 {
   "pr": 198995,
   "title": "[Test] Improve test reuse in test_torch.py for out-of-tree backends [8/N]",
-  "expected": {
-    "accelerator_test_refactoring": "assign"
-  },
+  "owners": [
+    "accelerator_test_refactoring"
+  ],
+  "judged_categories": [
+    "accelerator_test_refactoring",
+    "autograd",
+    "flex_attention",
+    "nn"
+  ],
   "tests": "Clause (3): converts test_torch.py tests so out-of-tree backends can reuse them.",
   "source": "reviewed",
   "labeled_by": "fffrog",
   "labeled_at": "2026-09-29",
-  "reason": "Part 8 of a series improving reuse of test_torch.py tests for out-of-tree backends; reviewed and approved by fffrog.",
+  "reason": "Part 8 of a series improving reuse of test_torch.py tests for out-of-tree backends; reviewed and approved by fffrog. Judged against all four categories on 2026-10-08 when the suite became one dataset; categories not listed in owners are expected absent.",
   "snapshot": {
     "head_sha": "a86d60aa7e6a7dac13e6c447e38e0936f2651605",
     "pytorch_sha": "e916b30b6d1d49e6df8d067ef013704fe0e32940",

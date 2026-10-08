@@ -1,15 +1,20 @@
 {
   "pr": 184718,
   "title": "[Test] Make test_testing.py device-agnostic for out-of-tree accelerators",
-  "expected": {
-    "accelerator_test_refactoring": "assign",
-    "nn": "not_assign"
-  },
+  "owners": [
+    "accelerator_test_refactoring"
+  ],
+  "judged_categories": [
+    "accelerator_test_refactoring",
+    "autograd",
+    "flex_attention",
+    "nn"
+  ],
   "tests": "Clause (3): converting test_testing.py tests so out-of-tree accelerators can run them; and that a test refactor outside nn tests does not go to nn.",
   "source": "hand-picked",
   "labeled_by": "soulitzer",
   "labeled_at": "2026-10-08",
-  "reason": "Makes test/test_testing.py device-agnostic for out-of-tree accelerators. Not an nn test file, so nn should not be assigned: nn owns refactors of nn tests only (soulitzer, 2026-10-08).",
+  "reason": "Makes test/test_testing.py device-agnostic for out-of-tree accelerators. Not an nn test file, so nn should not be assigned: nn owns refactors of nn tests only (soulitzer, 2026-10-08). Judged against all four categories on 2026-10-08 when the suite became one dataset; categories not listed in owners are expected absent.",
   "snapshot": {
     "head_sha": "cffc78d336c19945b0424cd436229b52b08f9cda",
     "pytorch_sha": "13e6ce9871133c72dd43a40d3f6e2af73f419434",

@@ -1,9 +1,12 @@
 {
   "pr": 199975,
   "title": "[CODEOWNERS] Annotate path groups with their GitHub labels",
-  "expected": {
-    "autograd": "assign"
-  },
+  "owners": [
+    "autograd"
+  ],
+  "judged_categories": [
+    "autograd"
+  ],
   "tests": "",
   "source": "reviewed",
   "labeled_by": "soulitzer",

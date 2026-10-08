@@ -1,14 +1,18 @@
 {
   "pr": 162454,
   "title": "[xpu][feature] Integrate OneDNN SDPA training forward/backward into XPU OVERRIDEABLE Backend",
-  "expected": {
-    "flex_attention": "not_assign"
-  },
+  "owners": [],
+  "judged_categories": [
+    "accelerator_test_refactoring",
+    "autograd",
+    "flex_attention",
+    "nn"
+  ],
   "tests": "Attention but not FlexAttention: an XPU oneDNN scaled_dot_product_attention backend.",
   "source": "hand-picked",
   "labeled_by": "soulitzer",
   "labeled_at": "2026-10-08",
-  "reason": "Adds SDPA training forward/backward for XPU via oneDNN (aten/src/ATen/native/mkldnn/xpu/, native_functions.yaml, test_transformers.py). drisspg reviewed it, but SDPA is not FlexAttention.",
+  "reason": "Adds SDPA training forward/backward for XPU via oneDNN (aten/src/ATen/native/mkldnn/xpu/, native_functions.yaml, test_transformers.py). drisspg reviewed it, but SDPA is not FlexAttention. Judged against all four categories on 2026-10-08 when the suite became one dataset; categories not listed in owners are expected absent.",
   "snapshot": {
     "head_sha": "6474f3d0029022eeb8072dc427c79e4016c405f8",
     "pytorch_sha": "13e6ce9871133c72dd43a40d3f6e2af73f419434",

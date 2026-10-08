@@ -1,15 +1,20 @@
 {
   "pr": 185220,
   "title": "[Test] Make test_wrap_inductor_compiled_regions.py device-agnostic for out-of-tree backends",
-  "expected": {
-    "accelerator_test_refactoring": "assign",
-    "nn": "not_assign"
-  },
+  "owners": [
+    "accelerator_test_refactoring"
+  ],
+  "judged_categories": [
+    "accelerator_test_refactoring",
+    "autograd",
+    "flex_attention",
+    "nn"
+  ],
   "tests": "Clause (3): converting a dynamo test file to run on out-of-tree backends. Also: a test refactor outside nn tests does not go to nn.",
   "source": "hand-picked",
   "labeled_by": "soulitzer",
   "labeled_at": "2026-10-08",
-  "reason": "Makes test/dynamo/test_wrap_inductor_compiled_regions.py device-agnostic. Not an nn test file, so nn should not be assigned: nn owns refactors of nn tests only (soulitzer, 2026-10-08).",
+  "reason": "Makes test/dynamo/test_wrap_inductor_compiled_regions.py device-agnostic. Not an nn test file, so nn should not be assigned: nn owns refactors of nn tests only (soulitzer, 2026-10-08). Judged against all four categories on 2026-10-08 when the suite became one dataset; categories not listed in owners are expected absent.",
   "snapshot": {
     "head_sha": "1054d5c30e7f83d14014934bb9b79b72357d4eeb",
     "pytorch_sha": "13e6ce9871133c72dd43a40d3f6e2af73f419434",

@@ -1,14 +1,18 @@
 {
   "pr": 188291,
   "title": "Fix dims docstring for torch.flip and torch.rot90 (axes, element type)",
-  "expected": {
-    "nn": "not_assign"
-  },
+  "owners": [],
+  "judged_categories": [
+    "accelerator_test_refactoring",
+    "autograd",
+    "flex_attention",
+    "nn"
+  ],
   "tests": "Boundary: a docstring fix for torch ops (torch.flip, torch.rot90), not torch.nn.",
   "source": "hand-picked",
   "labeled_by": "soulitzer",
   "labeled_at": "2026-10-08",
-  "reason": "Only changes torch/_torch_docs.py; jbschlosser approved it, but torch.flip and torch.rot90 are not torch.nn APIs. Judged not nn by soulitzer (2026-10-08).",
+  "reason": "Only changes torch/_torch_docs.py; jbschlosser approved it, but torch.flip and torch.rot90 are not torch.nn APIs. Judged not nn by soulitzer (2026-10-08). Judged against all four categories on 2026-10-08 when the suite became one dataset; categories not listed in owners are expected absent.",
   "snapshot": {
     "head_sha": "abe6e46803f4302d9f5aae4ee97451e42490eae7",
     "pytorch_sha": "13e6ce9871133c72dd43a40d3f6e2af73f419434",

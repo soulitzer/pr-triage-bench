@@ -1,14 +1,20 @@
 {
   "pr": 191919,
   "title": "[Testcase Refactoring] Add distributed test capability gates",
-  "expected": {
-    "accelerator_test_refactoring": "assign"
-  },
+  "owners": [
+    "accelerator_test_refactoring"
+  ],
+  "judged_categories": [
+    "accelerator_test_refactoring",
+    "autograd",
+    "flex_attention",
+    "nn"
+  ],
   "tests": "Clauses (2) and (4): adds requires_capabilities gates to the Capability registry and changes the device-type test framework (common_device_type.py).",
   "source": "reviewed",
   "labeled_by": "fffrog",
   "labeled_at": "2026-08-11",
-  "reason": "Adds distributed test capability gates in torch/testing/_internal/common_device_type.py with tests in test_testing.py; reviewed by fffrog.",
+  "reason": "Adds distributed test capability gates in torch/testing/_internal/common_device_type.py with tests in test_testing.py; reviewed by fffrog. Judged against all four categories on 2026-10-08 when the suite became one dataset; categories not listed in owners are expected absent.",
   "snapshot": {
     "head_sha": "f22c53dcb48db3e943238ca06c180f8f3c990b1e",
     "pytorch_sha": "e916b30b6d1d49e6df8d067ef013704fe0e32940",

@@ -3,17 +3,22 @@
 Regression suite for PyTorch's [Auto PR Triage](https://github.com/pytorch/pytorch/blob/main/.github/workflows/auto-pr-triage.yml)
 owner routing. Dashboard: https://soulitzer.github.io/pr-triage-bench/
 
-Each case is a PR whose inputs were snapshotted, with the owner categories a
-person says the bot should or should not assign. A run replays every snapshot
-through the production pipeline at one pytorch commit, several times per case.
-Cases are chosen to cover each part of a category's description (what it owns
-and what it excludes), so the suite is not a random sample.
+The cases form one dataset. Each is a PR whose inputs were snapshotted, with
+the complete set of owner categories a person says it should get; every other
+category is expected absent, so every case counts toward every category's
+false positive rate. A run replays every snapshot through the production
+pipeline at one pytorch commit, several times per case. Cases are added per
+category to cover each part of its description (what it owns and what it
+excludes), so the dataset is not a random sample.
 
 ## Cases
 
 `cases/<pr>/case.json` records:
 
-- `expected`: owner category -> `assign` or `not_assign`
+- `owners`: the complete set of categories the PR should get (may be empty)
+- `judged_categories`: the categories the labeler considered; any of them not
+  in `owners` is expected absent. Categories added to the config later are
+  unjudged for the case until someone reviews it and adds them here.
 - `tests`: what this case tests, for example which clause of the description
 - `source`: `bot-mislabeled`, `reviewed` (someone on the category's roster
   reviewed the PR), or `hand-picked`
@@ -41,14 +46,19 @@ Owner categories that get renamed are mapped in `cases/owner_aliases.json`.
    `bot-mislabeled` label and fix the reviewers.
 2. **Draft.** `python -m bench.harvest [options]` snapshots each PR with the
    pipeline on pytorch `main` and drafts `cases/pending/<pr>/`:
-   - every new `bot-mislabeled` PR, with the categories the bot assigned as
-     `not_assign` (skip with `--skip-mislabeled`);
+   - every new `bot-mislabeled` PR, with empty `owners`, since the categories
+     the bot assigned were judged wrong (skip with `--skip-mislabeled`);
    - with `--reviewed-owner <category>`, the most recently updated PRs a
      reviewer on that category's roster reviewed (up to `--reviewed-limit`,
-     default 10, per reviewer), as `assign`. The bot need not have routed them,
-     and reviewers also review work outside their category, so check each one;
-   - with `--add <pr> --expect <category>=<assign|not_assign>`, a hand-picked PR.
-3. **Confirm.** Fill in `tests` and `reason`, fix `expected`, and move the
+     default 10, per reviewer), with `owners` set to that category. The bot
+     need not have routed them, and reviewers also review work outside their
+     category, so check each one;
+   - with `--add <pr> --owners <category,...>`, a hand-picked PR (`--owners ''`
+     for none).
+
+   Every draft is judged against all current categories.
+3. **Confirm.** Fill in `tests` and `reason`, complete `owners` (every category
+   the PR should get, not just the one it was harvested for), and move the
    directory to `cases/`. Move drafts you don't want to `cases/skipped/` so
    harvest does not draft them again. Only directories in `cases/` count.
 
@@ -88,18 +98,22 @@ snapshots may need to be retaken.
 
 ## Scores
 
-Per case and expected category, a run passes when it assigns a category the
-case expects assigned, or leaves out one expected absent. Per category:
+Per case and judged category, a run passes when it assigns a category in the
+case's `owners`, or leaves out one that is not. Per category:
 
-- **recall**: share of runs that assign the category on `assign` cases;
-- **false positive rate**: share of runs that assign it on `not_assign` cases.
+- **recall**: share of runs that assign the category on cases listing it;
+- **false positive rate**: share of runs that assign it on every other case.
+
+Overall, the same two pooled over all categories, plus **exact match**: the
+share of runs whose assigned categories equal the case's `owners` exactly.
 
 Neither depends on how many cases of each kind the suite has. Precision would,
 and it can be computed from the two, so it is not reported. Because cases are
 chosen to cover the description rather than sampled, use these to compare
 configs, not as production rates.
 
-Runs whose worker output fails validation are counted separately.
+Runs whose worker output fails validation are counted separately, as the run's
+failed-validation rate.
 
 ## Dashboard
 
@@ -109,8 +123,11 @@ python -m bench.publish runs/main runs/proposal
 
 copies each run's sanitized `results.jsonl` and `meta.json` into
 `results/<name>/` (committed) and rebuilds `docs/index.html`, which GitHub
-Pages serves from `main`. Two pickers choose runs A and B: the category table
-and its expandable samples show those two runs, and the comparison below shows
+Pages serves from `main`. Two pickers choose runs A and B: the run totals
+(exact match, failed validation), the category table (an all-categories row,
+then one row per category), and its expandable samples show those two runs. A
+category expands to the cases listing it plus any other case where some run
+assigned it; and the comparison below shows
 what differs (with a GitHub diff link between the two commits and a word diff
 of changed descriptions), each metric's change, and samples whose result
 changed. Run with no arguments to rebuild after changing cases.

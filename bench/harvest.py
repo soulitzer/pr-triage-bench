@@ -2,17 +2,19 @@
 
 Drafts go to cases/pending/<pr>/:
 
-1. bot-mislabeled: PRs a person labeled bot-mislabeled. Every category the
-   bot assigned starts as expected not_assign.
+1. bot-mislabeled: PRs a person labeled bot-mislabeled. owners starts empty,
+   since the categories the bot assigned were judged wrong.
 2. reviewed: with --reviewed-owner <category>, the most recently updated PRs a
-   reviewer on that category's roster reviewed. The category starts as
-   expected assign.
-3. hand-picked: --add <pr> --expect <category>=<assign|not_assign>.
+   reviewer on that category's roster reviewed. owners starts as that category.
+3. hand-picked: --add <pr> --owners <category,...> (empty for none).
+
+Every draft is judged against all current categories (from pytorch main), so
+owners must end up as the complete set of categories the PR should get.
 
 Each draft snapshots the PR's intake result and changed files, and lists the
 bot's runs (with the categories each assigned, read from the run log), people's
 reviewer changes after the bot first acted, and roster reviews. A person fills
-in tests and reason, fixes expected, and moves the directory to cases/. Drafts
+in tests and reason, completes owners, and moves the directory to cases/. Drafts
 not worth keeping go to cases/skipped/ so they are not drafted again.
 """
 
@@ -75,7 +77,7 @@ class CaseDraft:
     """What a draft knows before its snapshot is taken."""
 
     history: PrHistory
-    expected: dict[str, str]
+    owners: tuple[str, ...]
     source: str
     labeled_by: str
     labeled_at: str
@@ -195,10 +197,9 @@ def draft_mislabeled(pr_number: int, /) -> CaseDraft:
     )
     mislabeled_at = parse_time(mislabel_event["created_at"])
     history = fetch_history(pr_number, until=mislabeled_at)
-    aliases = load_owner_aliases()
     return CaseDraft(
         history=history,
-        expected={canonical_owner(o, aliases=aliases): "not_assign" for o in sorted(history.assigned_owners)},
+        owners=(),
         source="bot-mislabeled",
         labeled_by=mislabel_event["actor"]["login"],
         labeled_at=mislabeled_at.date().isoformat(),
@@ -215,7 +216,7 @@ def draft_reviewed(pr_number: int, /, *, owner: str, reviewer: str) -> CaseDraft
         return None
     return CaseDraft(
         history=fetch_history(pr_number, until=datetime.now(timezone.utc)),
-        expected={owner: "assign"},
+        owners=(owner,),
         source="reviewed",
         labeled_by=reviewer,
         labeled_at=reviews[0].at[:10],
@@ -223,10 +224,10 @@ def draft_reviewed(pr_number: int, /, *, owner: str, reviewer: str) -> CaseDraft
     )
 
 
-def draft_hand_picked(pr_number: int, /, *, expected: dict[str, str]) -> CaseDraft:
+def draft_hand_picked(pr_number: int, /, *, owners: tuple[str, ...]) -> CaseDraft:
     return CaseDraft(
         history=fetch_history(pr_number, until=datetime.now(timezone.utc)),
-        expected=expected,
+        owners=owners,
         source="hand-picked",
         labeled_by=gh_api("user")["login"],
         labeled_at=datetime.now(timezone.utc).date().isoformat(),
@@ -248,7 +249,7 @@ def is_known(pr_number: int, /) -> bool:
     return any((d / str(pr_number)).exists() for d in (CASES_DIR, PENDING_DIR, SKIPPED_DIR))
 
 
-def write_pending(draft: CaseDraft, /, *, pytorch_sha: str) -> None:
+def write_pending(draft: CaseDraft, /, *, pytorch_sha: str, categories: list[str]) -> None:
     """Snapshot the PR with the pipeline at pytorch_sha and write cases/pending/<pr>/."""
 
     pr_number = draft.history.pr["number"]
@@ -266,7 +267,8 @@ def write_pending(draft: CaseDraft, /, *, pytorch_sha: str) -> None:
     case = Case(
         pr=pr_number,
         title=draft.history.pr["title"],
-        expected=draft.expected,
+        owners=draft.owners,
+        judged_categories=tuple(categories),
         tests="",
         source=draft.source,
         labeled_by=draft.labeled_by,
@@ -278,14 +280,7 @@ def write_pending(draft: CaseDraft, /, *, pytorch_sha: str) -> None:
         reviews=draft.reviews,
     )
     write_case(case, case_dir=case_dir)
-    print(f"drafted cases/pending/{pr_number}: {draft.source}, expected {draft.expected}")
-
-
-def parse_expectation(value: str, /) -> tuple[str, str]:
-    owner, _, expectation = value.partition("=")
-    if expectation not in ("assign", "not_assign"):
-        raise argparse.ArgumentTypeError("use <category>=assign or <category>=not_assign")
-    return owner, expectation
+    print(f"drafted cases/pending/{pr_number}: {draft.source}, owners {list(draft.owners) or 'none'}")
 
 
 def main() -> None:
@@ -293,21 +288,25 @@ def main() -> None:
     parser.add_argument("--reviewed-owner", action="append", default=[], help="category (repeatable)")
     parser.add_argument("--reviewed-limit", type=int, default=10, help="max reviewed drafts per reviewer")
     parser.add_argument("--add", type=int, action="append", default=[], help="hand-picked PR (repeatable)")
-    parser.add_argument("--expect", type=parse_expectation, action="append", default=[])
+    parser.add_argument("--owners", help="comma-separated categories for --add PRs; empty for none")
     parser.add_argument("--skip-mislabeled", action="store_true", help="do not draft bot-mislabeled PRs")
     args = parser.parse_args()
-    if args.add and not args.expect:
-        parser.error("--add needs at least one --expect <category>=<assign|not_assign>")
+    if args.add and args.owners is None:
+        parser.error("--add needs --owners <category,...> (use --owners '' for none)")
+    roster = find_roster()
+    categories = sorted(roster)
+    owners = tuple(o for o in (args.owners or "").split(",") if o)
+    if unknown := set(owners) - set(categories):
+        parser.error(f"unknown categories {sorted(unknown)}; current ones are {categories}")
     pytorch_sha = gh_api(f"repos/{REPOSITORY}/commits/main")["sha"]
     prepare_pipeline(pytorch_sha=pytorch_sha, dest=SNAPSHOT_PIPELINE_DIR / pytorch_sha)
     PENDING_DIR.mkdir(parents=True, exist_ok=True)
     for pr_number in args.add:
-        write_pending(draft_hand_picked(pr_number, expected=dict(args.expect)), pytorch_sha=pytorch_sha)
+        write_pending(draft_hand_picked(pr_number, owners=owners), pytorch_sha=pytorch_sha, categories=categories)
     mislabeled = [] if args.skip_mislabeled else search_prs(f'label:"{MISLABEL_LABEL}"')
     for pr_number in mislabeled:
         if not is_known(pr_number):
-            write_pending(draft_mislabeled(pr_number), pytorch_sha=pytorch_sha)
-    roster = find_roster()
+            write_pending(draft_mislabeled(pr_number), pytorch_sha=pytorch_sha, categories=categories)
     for owner in args.reviewed_owner:
         for reviewer in roster[owner]:
             drafted = 0
@@ -318,7 +317,7 @@ def main() -> None:
                     continue
                 draft = draft_reviewed(pr_number, owner=owner, reviewer=reviewer)
                 if draft is not None:
-                    write_pending(draft, pytorch_sha=pytorch_sha)
+                    write_pending(draft, pytorch_sha=pytorch_sha, categories=categories)
                     drafted += 1
 
 

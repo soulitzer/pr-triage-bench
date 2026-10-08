@@ -1,9 +1,12 @@
 {
   "pr": 199956,
   "title": "Define \"ready for review\" and move the label decision out of the automated review",
-  "expected": {
-    "nn": "assign"
-  },
+  "owners": [
+    "nn"
+  ],
+  "judged_categories": [
+    "nn"
+  ],
   "tests": "",
   "source": "reviewed",
   "labeled_by": "albanD",

@@ -1,15 +1,21 @@
 {
   "pr": 189537,
   "title": "[Test] Refactor test/test_nn.py to be device-agnostic [8/N]",
-  "expected": {
-    "nn": "assign",
-    "accelerator_test_refactoring": "assign"
-  },
+  "owners": [
+    "accelerator_test_refactoring",
+    "nn"
+  ],
+  "judged_categories": [
+    "accelerator_test_refactoring",
+    "autograd",
+    "flex_attention",
+    "nn"
+  ],
   "tests": "Both categories on an nn test refactor: clause (3) conversion of test/test_nn.py to device-agnostic tests, which nn also owns because it refactors nn tests.",
   "source": "hand-picked",
   "labeled_by": "soulitzer",
   "labeled_at": "2026-10-08",
-  "reason": "Part 8 of a series making test/test_nn.py device-agnostic; only test/test_nn.py changes. nn and accelerator_test_refactoring both own refactors of nn tests (soulitzer, 2026-10-08).",
+  "reason": "Part 8 of a series making test/test_nn.py device-agnostic; only test/test_nn.py changes. nn and accelerator_test_refactoring both own refactors of nn tests (soulitzer, 2026-10-08). Judged against all four categories on 2026-10-08 when the suite became one dataset; categories not listed in owners are expected absent.",
   "snapshot": {
     "head_sha": "bcf449805f72f81946a73f2056d7062407b65c3f",
     "pytorch_sha": "56c0db589b3b5963102e58867f06ed80b434bf1c",

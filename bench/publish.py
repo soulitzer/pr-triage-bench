@@ -16,7 +16,7 @@ from html import escape
 from pathlib import Path
 
 from bench.cases import REPO_ROOT, Case, canonical_owner, load_cases, load_owner_aliases
-from bench.score import CaseResult, CategorySummary, format_ratio, score_run
+from bench.score import CaseResult, CategorySummary, RunScore, format_ratio, score_run
 
 
 RESULTS_DIR = REPO_ROOT / "results"
@@ -28,15 +28,21 @@ METADATA_FILE = "extra_ownership_metadata.json"
 METRICS = (
     ("recall", "recall", True),
     ("false pos.", "false_positive_rate", False),
-    ("failed", "failure_rate", False),
+)
+# Run-level numbers: (label, RunScore field, higher is better).
+RUN_TOTALS = (
+    ("exact match", "exact_match", True),
+    ("failed validation", "failure_rate", False),
 )
 METRIC_DEFINITIONS = {
-    "recall": "Recall: of the valid runs on samples expecting the category, the share that "
-    "assigned it. Runs that failed validation are left out.",
-    "false_positive_rate": "False positive rate: of the valid runs on samples expecting the "
-    "category absent, the share that assigned it anyway. Runs that failed validation are left out.",
+    "recall": "Recall: of the valid runs on samples whose owners include the category, the share "
+    "that assigned it. Runs that failed validation are left out.",
+    "false_positive_rate": "False positive rate: of the valid runs on every other sample, the share "
+    "that assigned the category anyway. Runs that failed validation are left out.",
+    "exact_match": "Exact match: of all valid runs, the share whose assigned categories equal the "
+    "sample's owners exactly.",
     "failure_rate": "Failed validation: of all runs (samples x reps), the share whose worker "
-    "output the validator rejected. These count toward neither recall nor false positive rate.",
+    "output the validator rejected. These count toward no other number.",
 }
 PYTORCH_URL = "https://github.com/pytorch/pytorch"
 REPO_URL = "https://github.com/soulitzer/pr-triage-bench"
@@ -54,8 +60,12 @@ class PublishedRun:
     index: int
     name: str
     meta: dict
-    summaries: dict[str, CategorySummary]
+    score: RunScore
     descriptions: dict[str, str]
+
+    @property
+    def summaries(self) -> dict[str, CategorySummary]:
+        return self.score.categories
 
     @property
     def source_label(self) -> str:
@@ -111,7 +121,7 @@ def load_published_runs(*, cases: list[Case]) -> list[PublishedRun]:
             index=-1,
             name=run_dir.name,
             meta=json.loads((run_dir / "meta.json").read_text()),
-            summaries=score_run(run_dir, cases=cases),
+            score=score_run(run_dir, cases=cases),
             descriptions=load_descriptions(run_dir),
         )
         for run_dir in sorted(RESULTS_DIR.iterdir())
@@ -232,28 +242,31 @@ def render_case_row(case: Case, /, *, owner: str, runs: list[PublishedRun]) -> s
     )
 
 
+POOLED_OWNER = "all categories"
+
+
 def explain_metric(summary: CategorySummary, /, *, field: str) -> str:
     """Spell out one score cell's numerator and denominator."""
 
     numerator, denominator = getattr(summary, field)
-    if field == "failure_rate":
-        return (
-            f"Failed validation {numerator}/{denominator}: {numerator} of all {denominator} runs "
-            f"({len(summary.results)} samples x reps) were rejected by the validator and count "
-            "toward neither recall nor false positive rate."
-        )
-    expectation, kind, suffix = (
-        ("assign", "assign", "") if field == "recall" else ("not_assign", "not-assign", " anyway")
+    expectation, which, suffix = (
+        ("assign", "list", "") if field == "recall" else ("not_assign", "do not list", " anyway")
     )
     results = [r for r in summary.results if r.expectation == expectation]
-    if not results:
-        return f"No {kind} samples for {summary.owner} yet."
-    failed = sum(r.failed_runs for r in results)
     label = "Recall" if field == "recall" else "False positive rate"
+    failed = sum(r.failed_runs for r in results)
+    if summary.owner == POOLED_OWNER:
+        return (
+            f"{label} {numerator}/{denominator}, pooled over every category: {denominator} valid "
+            f"(run, category) pairs where the sample's owners {which} the category ({failed} more "
+            f"pairs come from runs that failed validation); {numerator} of them assigned it{suffix}."
+        )
+    if not results:
+        return f"No samples {which} {summary.owner} yet."
     return (
-        f"{label} {numerator}/{denominator}: {denominator} valid runs on the {len(results)} {kind} "
-        f"samples ({denominator + failed} runs, {failed} failed validation); {numerator} of them "
-        f"assigned {summary.owner}{suffix}."
+        f"{label} {numerator}/{denominator}: {denominator} valid runs on the {len(results)} samples "
+        f"whose owners {which} {summary.owner} ({denominator + failed} runs, {failed} failed "
+        f"validation); {numerator} of them assigned {summary.owner}{suffix}."
     )
 
 
@@ -285,16 +298,10 @@ def render_run_heading(run: PublishedRun, /) -> str:
     )
 
 
-def render_category(owner: str, /, *, cases: list[Case], runs: list[PublishedRun]) -> str:
-    """One expandable row: the category's scores per run, then its samples."""
-
-    owner_cases = sorted(
-        (case for case in cases if owner in case.expected),
-        key=lambda case: (case.expected[owner], case.pr),
-    )
-    cells = "".join(
+def render_metric_cells(owner: str, /, *, runs: list[PublishedRun], pooled: bool = False) -> str:
+    return "".join(
         render_grid_cell(
-            run.summaries.get(owner),
+            run.score.all_categories if pooled else run.summaries.get(owner),
             field=field,
             higher_is_better=higher_is_better,
             starts_run=index == 0,
@@ -303,22 +310,64 @@ def render_category(owner: str, /, *, cases: list[Case], runs: list[PublishedRun
         for run in runs
         for index, (_, field, higher_is_better) in enumerate(METRICS)
     )
+
+
+def has_false_positive(case: Case, /, *, owner: str, runs: list[PublishedRun]) -> bool:
+    return any((result := run.result(owner=owner, pr=case.pr)) is not None and result.assigned for run in runs)
+
+
+def render_category(owner: str, /, *, cases: list[Case], runs: list[PublishedRun]) -> str:
+    """One expandable row: the category's scores per run, then the samples worth seeing.
+
+    Those are the samples whose owners list the category, and any other sample
+    where some run assigned it.
+    """
+
+    judged = [case for case in cases if owner in case.expected]
+    positives = [case for case in judged if case.expected[owner] == "assign"]
+    negatives = [case for case in judged if case.expected[owner] == "not_assign"]
+    flagged = [case for case in negatives if has_false_positive(case, owner=owner, runs=runs)]
     summary = (
         f'<summary class="grid"><span class="cell name">{escape(owner)}</span>'
-        f'<span class="cell">{len(owner_cases) or "none yet"}</span>{cells}</summary>'
+        f'<span class="cell" data-tip="{len(positives)} samples list {escape(owner)} in their owners; '
+        f'{len(negatives)} do not.">+{len(positives)} / -{len(negatives)}</span>'
+        f"{render_metric_cells(owner, runs=runs)}</summary>"
     )
-    if not owner_cases:
-        return f'<details class="category empty">{summary}<p class="sub">No samples yet.</p></details>'
+    shown = sorted(positives, key=lambda case: case.pr) + sorted(flagged, key=lambda case: case.pr)
+    passing = len(negatives) - len(flagged)
+    footer = (
+        f'<p class="sub">{passing} other samples do not list {escape(owner)}, and no run assigned it to them.</p>'
+        if passing
+        else ""
+    )
+    if not shown:
+        return f'<details class="category">{summary}{footer or "<p class=sub>No samples yet.</p>"}</details>'
     run_headers = "".join(
         f'<th class="run-start" data-run="{run.index}">{render_run_heading(run)}</th>' for run in runs
     )
-    case_rows = "".join(render_case_row(case, owner=owner, runs=runs) for case in owner_cases)
+    case_rows = "".join(render_case_row(case, owner=owner, runs=runs) for case in shown)
     return (
         f'<details class="category">{summary}'
         "<table><thead><tr><th>PR</th><th>expected</th><th>what this sample tests</th>"
         f"{run_headers}<th>reason</th><th></th></tr></thead><tbody>{case_rows}</tbody></table>"
-        "</details>"
+        f"{footer}</details>"
     )
+
+
+def render_run_totals(runs: list[PublishedRun], /) -> str:
+    """Exact match and failed validation per run; the pickers show A and B."""
+
+    items = "".join(
+        f'<span class="total" data-run="{run.index}"><span class="slot"></span><b>{escape(run.name)}</b>: '
+        + " | ".join(
+            f'<span data-tip="{escape(METRIC_DEFINITIONS[field])}">{label} '
+            f"{escape(format_ratio(getattr(run.score, field)))}</span>"
+            for label, field, _ in RUN_TOTALS
+        )
+        + "</span>"
+        for run in runs
+    )
+    return f'<div class="totals">{items}</div>'
 
 
 def render_category_table(*, owners: list[str], cases: list[Case], runs: list[PublishedRun]) -> str:
@@ -338,9 +387,16 @@ def render_category_table(*, owners: list[str], cases: list[Case], runs: list[Pu
         f'<span class="cell head">samples</span>{run_spans}</div>'
         f'<div class="grid header"><span class="cell"></span><span class="cell"></span>{metric_heads}</div>'
     )
+    pooled = (
+        f'<div class="grid pooled"><span class="cell name">{POOLED_OWNER}</span>'
+        f'<span class="cell">{len(cases)}</span>{render_metric_cells(POOLED_OWNER, runs=runs, pooled=True)}</div>'
+    )
     columns = f"16rem 6rem repeat({len(METRICS) * len(runs)}, 6.5rem)"
     rows = "".join(render_category(owner, cases=cases, runs=runs) for owner in owners)
-    return f'<div class="categories" style="--columns: {columns}">{header}{rows}</div>'
+    return (
+        f"{render_run_totals(runs)}"
+        f'<div class="categories" style="--columns: {columns}">{header}{pooled}{rows}</div>'
+    )
 
 
 COMPARE_SCRIPT = r"""
@@ -452,8 +508,10 @@ function render() {
   if (a.sha !== b.sha) {
     const item = node("li");
     const diffLink = node("a", "file changes between the two commits on GitHub");
-    diffLink.href = "https://github.com/pytorch/pytorch/compare/" + a.sha + "..." + b.sha;
-    item.append(diffLink, node("span", " (diffs from their common ancestor; for stacked ghstack PRs this also includes earlier PRs in the stack)", "sub"));
+    // Two dots compares the commits' contents directly. Three dots would diff from their
+    // common ancestor, which for ghstack PRs (sibling head commits) includes earlier PRs.
+    diffLink.href = "https://github.com/pytorch/pytorch/compare/" + a.sha + ".." + b.sha;
+    item.append(diffLink, node("span", " (a direct diff of the two commits' contents)", "sub"));
     differs.append(item);
   }
   out.append(differs);
@@ -468,10 +526,12 @@ function render() {
 
   out.append(node("h3", "Metrics"));
   const metricRows = [];
-  const metricOwners = [...new Set([...Object.keys(a.metrics), ...Object.keys(b.metrics)])].sort();
+  const pooled = "all categories";
+  const metricOwners = [pooled, ...[...new Set([...Object.keys(a.metrics), ...Object.keys(b.metrics)])].filter(o => o !== pooled).sort()];
   metricOwners.forEach(o => data.metrics.forEach(([label, field, higherIsBetter, definition]) => {
     const ra = (a.metrics[o] || {})[field];
     const rb = (b.metrics[o] || {})[field];
+    if (ra === undefined && rb === undefined) return;
     const delta = rate(ra) === null || rate(rb) === null ? null : Math.round(100 * (rate(rb) - rate(ra)));
     const cls = !delta ? "" : (delta > 0) === higherIsBetter ? "better" : "worse";
     const shown = delta === null ? "-" : (delta > 0 ? "+" : "") + delta + " pts";
@@ -484,6 +544,7 @@ function render() {
   out.append(node("h3", "Samples whose result changed"));
   const sampleRows = [];
   const sampleOwners = [...new Set([...Object.keys(a.samples), ...Object.keys(b.samples)])].sort();
+  // Only samples where some category's result changed.
   sampleOwners.forEach(o => {
     const prs = [...new Set([...Object.keys(a.samples[o] || {}), ...Object.keys(b.samples[o] || {})])].sort();
     prs.forEach(pr => {
@@ -506,7 +567,9 @@ def render_compare_section(*, cases: list[Case], runs: list[PublishedRun]) -> st
     """Two run pickers and the data the comparison script renders from."""
 
     data = {
-        "metrics": [[label, field, higher, METRIC_DEFINITIONS[field]] for label, field, higher in METRICS],
+        "metrics": [
+            [label, field, higher, METRIC_DEFINITIONS[field]] for label, field, higher in METRICS + RUN_TOTALS
+        ],
         "cases": {
             case.pr: {"title": case.title, "expected": case.expected} for case in cases
         },
@@ -518,6 +581,10 @@ def render_compare_section(*, cases: list[Case], runs: list[PublishedRun]) -> st
                 "source_label": run.source_label,
                 "descriptions": run.descriptions,
                 "metrics": {
+                    POOLED_OWNER: {field: getattr(run.score.all_categories, field) for _, field, _ in METRICS}
+                    | {field: getattr(run.score, field) for _, field, _ in RUN_TOTALS}
+                }
+                | {
                     owner: {field: getattr(summary, field) for _, field, _ in METRICS}
                     for owner, summary in run.summaries.items()
                 },
@@ -583,6 +650,8 @@ def render_page(*, cases: list[Case], runs: list[PublishedRun]) -> str:
   span.cell.bad {{ background: #ffebe9; }}
   span.cell.na {{ color: #656d76; }}
   td details summary {{ cursor: pointer; }}
+  .totals {{ display: flex; gap: 2rem; margin: 0.75rem 0 0.25rem; }}
+  .grid.pooled {{ background: #f6f8fa; font-weight: 600; }}
   .run-start {{ border-left: 3px solid #57606a !important; }}
   td.better {{ background: #dafbe1; }}
   td.worse {{ background: #ffebe9; }}

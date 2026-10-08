@@ -1,9 +1,10 @@
 """Score a run against the regression cases, per owner category.
 
-For each case and expected owner, a run passes when it assigns an owner the
-case expects assigned, or leaves out one it expects not assigned. Per
-category: recall on cases expecting it, and false positive rate on cases
-expecting it absent. Neither depends on how many cases of each kind the suite
+For each case and judged category, a run passes when it assigns a category in
+the case's owners, or leaves out one that is not. Per category: recall on
+cases listing it, and false positive rate on every other case. Overall: the
+same two pooled over all categories, and exact match, the share of valid runs
+whose assigned categories equal the case's owners. Neither depends on how many cases of each kind the suite
 has; precision would, so it is not reported. Runs whose worker output failed
 validation are counted separately.
 """
@@ -68,13 +69,34 @@ class CategorySummary:
         return self.failed_runs, sum(r.judged_runs + r.failed_runs for r in self.results)
 
 
-def score_run(run_dir: Path, /, *, cases: list[Case]) -> dict[str, CategorySummary]:
+@dataclass(frozen=True)
+class RunScore:
+    """Per-category summaries plus totals over every case and category."""
+
+    categories: dict[str, CategorySummary]
+    exact_match: tuple[int, int]
+    failure_rate: tuple[int, int]
+
+    @property
+    def all_categories(self) -> CategorySummary:
+        """Every (case, category) result pooled, for overall recall and false positive rate."""
+
+        return CategorySummary(
+            owner="all categories",
+            results=tuple(r for summary in self.categories.values() for r in summary.results),
+        )
+
+
+def score_run(run_dir: Path, /, *, cases: list[Case]) -> RunScore:
     aliases = load_owner_aliases()
     runs_by_pr = defaultdict(list)
     for line in (run_dir / "results.jsonl").read_text().splitlines():
         result = json.loads(line)
         runs_by_pr[result["pr"]].append(result)
     results_by_owner = defaultdict(list)
+    exact = 0
+    valid_runs = 0
+    total_runs = 0
     for case in cases:
         runs = sorted(runs_by_pr.get(case.pr, []), key=lambda r: r["rep"])
         if not runs:
@@ -85,6 +107,11 @@ def score_run(run_dir: Path, /, *, cases: list[Case]) -> dict[str, CategorySumma
             owners | {canonical_owner(o, aliases=aliases) for o in r["discarded_owners"]}
             for owners, r in zip(accepted, succeeded)
         ]
+        judged = {canonical_owner(o, aliases=aliases) for o in case.judged_categories}
+        expected_owners = {canonical_owner(o, aliases=aliases) for o in case.owners}
+        exact += sum((owners & judged) == expected_owners for owners in accepted)
+        valid_runs += len(succeeded)
+        total_runs += len(runs)
         for owner_id, expectation in sorted(case.expected.items()):
             owner = canonical_owner(owner_id, aliases=aliases)
             results_by_owner[owner].append(
@@ -102,10 +129,14 @@ def score_run(run_dir: Path, /, *, cases: list[Case]) -> dict[str, CategorySumma
                     ),
                 )
             )
-    return {
-        owner: CategorySummary(owner=owner, results=tuple(results))
-        for owner, results in sorted(results_by_owner.items())
-    }
+    return RunScore(
+        categories={
+            owner: CategorySummary(owner=owner, results=tuple(results))
+            for owner, results in sorted(results_by_owner.items())
+        },
+        exact_match=(exact, valid_runs),
+        failure_rate=(total_runs - valid_runs, total_runs),
+    )
 
 
 def format_ratio(ratio: tuple[int, int], /) -> str:
@@ -120,8 +151,14 @@ def main() -> None:
     run_dir = parser.parse_args().run_dir
     meta = json.loads((run_dir / "meta.json").read_text())
     print({key: meta[key] for key in ("pytorch_sha", "pr", "model", "effort", "reps")})
-    summaries = score_run(run_dir, cases=load_cases())
-    for summary in summaries.values():
+    score = score_run(run_dir, cases=load_cases())
+    pooled = score.all_categories
+    print(
+        f"all categories: recall {format_ratio(pooled.recall)}, false positive rate "
+        f"{format_ratio(pooled.false_positive_rate)}, exact match {format_ratio(score.exact_match)}, "
+        f"failed validation {format_ratio(score.failure_rate)}"
+    )
+    for summary in score.categories.values():
         print(
             f"\n{summary.owner}: recall {format_ratio(summary.recall)}, "
             f"false positive rate {format_ratio(summary.false_positive_rate)}, "

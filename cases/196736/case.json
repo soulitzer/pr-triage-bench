@@ -1,14 +1,20 @@
 {
   "pr": 196736,
   "title": "[inductor] Route flex decoding get_split_k SM count via DeviceInterface",
-  "expected": {
-    "flex_attention": "assign"
-  },
+  "owners": [
+    "flex_attention"
+  ],
+  "judged_categories": [
+    "accelerator_test_refactoring",
+    "autograd",
+    "flex_attention",
+    "nn"
+  ],
   "tests": "Integration clause: how flex decoding picks its split-k from the device's SM count.",
   "source": "reviewed",
   "labeled_by": "drisspg",
   "labeled_at": "2026-09-30",
-  "reason": "Changes torch/_inductor/kernel/flex/flex_decoding.py with a test in test_flex_decoding.py; approved by drisspg.",
+  "reason": "Changes torch/_inductor/kernel/flex/flex_decoding.py with a test in test_flex_decoding.py; approved by drisspg. Judged against all four categories on 2026-10-08 when the suite became one dataset; categories not listed in owners are expected absent.",
   "snapshot": {
     "head_sha": "57af0770034b33f1f0f297378d082849a5210d17",
     "pytorch_sha": "13e6ce9871133c72dd43a40d3f6e2af73f419434",

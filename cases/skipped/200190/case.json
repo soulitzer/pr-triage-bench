@@ -1,9 +1,12 @@
 {
   "pr": 200190,
   "title": "[inductor] Don't keep exceptions returned by maybe_append_choice bound",
-  "expected": {
-    "flex_attention": "assign"
-  },
+  "owners": [
+    "flex_attention"
+  ],
+  "judged_categories": [
+    "flex_attention"
+  ],
   "tests": "",
   "source": "reviewed",
   "labeled_by": "drisspg",

@@ -1,9 +1,12 @@
 {
   "pr": 199638,
   "title": "[CUDA] Add Python-callable MemPool allocators",
-  "expected": {
-    "nn": "assign"
-  },
+  "owners": [
+    "nn"
+  ],
+  "judged_categories": [
+    "nn"
+  ],
   "tests": "",
   "source": "reviewed",
   "labeled_by": "albanD",

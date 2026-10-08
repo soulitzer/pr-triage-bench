@@ -1,9 +1,12 @@
 {
   "pr": 200198,
   "title": "Add REVIEW.md for torch/csrc/stable",
-  "expected": {
-    "autograd": "assign"
-  },
+  "owners": [
+    "autograd"
+  ],
+  "judged_categories": [
+    "autograd"
+  ],
   "tests": "",
   "source": "reviewed",
   "labeled_by": "soulitzer",

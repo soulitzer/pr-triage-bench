@@ -1,8 +1,14 @@
 """Load and validate regression cases.
 
-Each case is a directory cases/<pr>/ holding case.json (the expected owner
-categories and why) and snapshot/ (the PR-side inputs the bot needed: intake
-result and changed files), so runs never depend on the live PR.
+Each case is a directory cases/<pr>/ holding case.json (the owner categories
+the PR should get, and why) and snapshot/ (the PR-side inputs the bot needed:
+intake result and changed files), so runs never depend on the live PR.
+
+The cases form one dataset. A case's owners are the complete set of
+categories it should get, judged against judged_categories: every other
+judged category is expected absent, so every case counts toward every
+category's false positive rate. Categories added after a case was labeled are
+unjudged for it until someone reviews it.
 """
 
 from __future__ import annotations
@@ -22,7 +28,6 @@ CASE_FILE = "case.json"
 SNAPSHOT_DIR = "snapshot"
 INTAKE_FILE = "intake.json"
 FILES_FILE = "files.json"
-EXPECTATIONS = frozenset({"assign", "not_assign"})
 SOURCES = frozenset({"bot-mislabeled", "reviewed", "hand-picked"})
 REVIEWER_ACTIONS = frozenset({"requested", "removed"})
 
@@ -112,11 +117,12 @@ class SnapshotInfo:
 
 @dataclass(frozen=True)
 class Case:
-    """One PR with the owner categories the bot should and should not assign."""
+    """One PR with the complete set of owner categories it should get."""
 
     pr: int
     title: str
-    expected: dict[str, str]
+    owners: tuple[str, ...]
+    judged_categories: tuple[str, ...]
     tests: str
     source: str
     labeled_by: str
@@ -132,7 +138,8 @@ class Case:
         return cls(
             pr=int(value["pr"]),
             title=value["title"],
-            expected=dict(value["expected"]),
+            owners=tuple(value["owners"]),
+            judged_categories=tuple(value["judged_categories"]),
             tests=value["tests"],
             source=value["source"],
             labeled_by=value["labeled_by"],
@@ -150,7 +157,8 @@ class Case:
         return {
             "pr": self.pr,
             "title": self.title,
-            "expected": self.expected,
+            "owners": list(self.owners),
+            "judged_categories": list(self.judged_categories),
             "tests": self.tests,
             "source": self.source,
             "labeled_by": self.labeled_by,
@@ -160,6 +168,15 @@ class Case:
             "bot_runs": [run.to_dict() for run in self.bot_runs],
             "reviewer_changes": [change.to_dict() for change in self.reviewer_changes],
             "reviews": [review.to_dict() for review in self.reviews],
+        }
+
+    @property
+    def expected(self) -> dict[str, str]:
+        """Each judged category mapped to assign or not_assign."""
+
+        return {
+            category: "assign" if category in self.owners else "not_assign"
+            for category in self.judged_categories
         }
 
 
@@ -189,8 +206,8 @@ def load_cases() -> list[Case]:
         problem = None
         if case_dir.name != str(case.pr):
             problem = f"holds the case for PR {case.pr}"
-        elif not case.expected or not set(case.expected.values()) <= EXPECTATIONS:
-            problem = f"expected must map owners to {sorted(EXPECTATIONS)}"
+        elif not case.judged_categories or not set(case.owners) <= set(case.judged_categories):
+            problem = "owners must be a subset of a non-empty judged_categories"
         elif case.source not in SOURCES:
             problem = f"source must be one of {sorted(SOURCES)}"
         elif not case.tests.strip() or not case.reason.strip():

@@ -1,9 +1,12 @@
 {
   "pr": 199968,
   "title": "Document CI execution and contributor responsibilities",
-  "expected": {
-    "nn": "assign"
-  },
+  "owners": [
+    "nn"
+  ],
+  "judged_categories": [
+    "nn"
+  ],
   "tests": "",
   "source": "reviewed",
   "labeled_by": "albanD",

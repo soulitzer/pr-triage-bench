@@ -1,9 +1,12 @@
 {
   "pr": 200165,
   "title": "Add a REVIEW.md for torch/headeronly",
-  "expected": {
-    "autograd": "assign"
-  },
+  "owners": [
+    "autograd"
+  ],
+  "judged_categories": [
+    "autograd"
+  ],
   "tests": "",
   "source": "reviewed",
   "labeled_by": "soulitzer",

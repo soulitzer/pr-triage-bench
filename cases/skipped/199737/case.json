@@ -1,9 +1,12 @@
 {
   "pr": 199737,
   "title": "[docs] Document CUDA-to-CPU transfers on NVLink-C2C systems",
-  "expected": {
-    "nn": "assign"
-  },
+  "owners": [
+    "nn"
+  ],
+  "judged_categories": [
+    "nn"
+  ],
   "tests": "",
   "source": "reviewed",
   "labeled_by": "albanD",

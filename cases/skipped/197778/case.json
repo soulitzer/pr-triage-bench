@@ -1,9 +1,12 @@
 {
   "pr": 197778,
   "title": "[Testcase Refactoring] Fix docstring order in test_quantization.py",
-  "expected": {
-    "accelerator_test_refactoring": "assign"
-  },
+  "owners": [
+    "accelerator_test_refactoring"
+  ],
+  "judged_categories": [
+    "accelerator_test_refactoring"
+  ],
   "tests": "",
   "source": "reviewed",
   "labeled_by": "fffrog",

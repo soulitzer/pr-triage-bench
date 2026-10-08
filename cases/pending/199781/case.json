@@ -1,9 +1,12 @@
 {
   "pr": 199781,
   "title": "[native-dsl] Use `has_torch_function` in place of `check_has_torch_function` in `const_data_ptr`",
-  "expected": {
-    "nn": "assign"
-  },
+  "owners": [
+    "nn"
+  ],
+  "judged_categories": [
+    "nn"
+  ],
   "tests": "",
   "source": "reviewed",
   "labeled_by": "albanD",

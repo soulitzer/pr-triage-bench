@@ -1,14 +1,20 @@
 {
   "pr": 184064,
   "title": "Fix silent int64 precision loss in F.pad constant mode",
-  "expected": {
-    "nn": "assign"
-  },
+  "owners": [
+    "nn"
+  ],
+  "judged_categories": [
+    "accelerator_test_refactoring",
+    "autograd",
+    "flex_attention",
+    "nn"
+  ],
   "tests": "User-facing torch.nn APIs clause: a behavior fix in torch.nn.functional (F.pad constant mode).",
   "source": "reviewed",
   "labeled_by": "jbschlosser",
   "labeled_at": "2026-05-19",
-  "reason": "Fixes silent int64 precision loss in F.pad constant mode in torch/nn/functional.py, with a test in test_nn.py; reviewed by jbschlosser. Confirmed nn by soulitzer (2026-10-08).",
+  "reason": "Fixes silent int64 precision loss in F.pad constant mode in torch/nn/functional.py, with a test in test_nn.py; reviewed by jbschlosser. Confirmed nn by soulitzer (2026-10-08). Judged against all four categories on 2026-10-08 when the suite became one dataset; categories not listed in owners are expected absent.",
   "snapshot": {
     "head_sha": "c5b1cc644ee143b24081453970815aebced25a0c",
     "pytorch_sha": "13e6ce9871133c72dd43a40d3f6e2af73f419434",

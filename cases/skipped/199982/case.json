@@ -1,9 +1,12 @@
 {
   "pr": 199982,
   "title": "[Caffe2] Check CUDA allocator test runtime errors",
-  "expected": {
-    "autograd": "assign"
-  },
+  "owners": [
+    "autograd"
+  ],
+  "judged_categories": [
+    "autograd"
+  ],
   "tests": "",
   "source": "reviewed",
   "labeled_by": "soulitzer",

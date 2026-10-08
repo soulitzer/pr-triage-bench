@@ -1,0 +1,14 @@
+[
+  {
+    "sha": "cb3b5e71879332de9f5be60d5676d90abbe8d27b",
+    "filename": "torch/_torch_docs.py",
+    "status": "modified",
+    "additions": 2,
+    "deletions": 2,
+    "changes": 4,
+    "blob_url": "https://github.com/pytorch/pytorch/blob/abe6e46803f4302d9f5aae4ee97451e42490eae7/torch%2F_torch_docs.py",
+    "raw_url": "https://github.com/pytorch/pytorch/raw/abe6e46803f4302d9f5aae4ee97451e42490eae7/torch%2F_torch_docs.py",
+    "contents_url": "https://api.github.com/repos/pytorch/pytorch/contents/torch%2F_torch_docs.py?ref=abe6e46803f4302d9f5aae4ee97451e42490eae7",
+    "patch": "@@ -11558,7 +11558,7 @@ def merge_dicts(*dicts):\n \n Args:\n     {input}\n-    dims (a list or tuple): axis to flip on\n+    dims (a list or tuple of ints): axes to flip on\n \n Example::\n \n@@ -11704,7 +11704,7 @@ def merge_dicts(*dicts):\n Args:\n     {input}\n     k (int): number of times to rotate. Default value is 1\n-    dims (a list or tuple): axis to rotate. Default value is [0, 1]\n+    dims (a list or tuple of ints): axes to rotate. Default value is [0, 1]\n \n Example::\n "
+  }
+]

@@ -1,0 +1,26 @@
+{
+  "pr": 200190,
+  "title": "[inductor] Don't keep exceptions returned by maybe_append_choice bound",
+  "expected": {
+    "flex_attention": "assign"
+  },
+  "tests": "",
+  "source": "reviewed",
+  "labeled_by": "drisspg",
+  "labeled_at": "2026-10-08",
+  "reason": "",
+  "snapshot": {
+    "head_sha": "6a83511e4d052531248cba681d083b5d6f624d70",
+    "pytorch_sha": "13e6ce9871133c72dd43a40d3f6e2af73f419434",
+    "taken_at": "2026-10-08T20:05:26Z"
+  },
+  "bot_runs": [],
+  "reviewer_changes": [],
+  "reviews": [
+    {
+      "at": "2026-10-08T15:09:07Z",
+      "reviewer": "drisspg",
+      "state": "APPROVED"
+    }
+  ]
+}

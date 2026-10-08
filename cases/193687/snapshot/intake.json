@@ -1,0 +1,23 @@
+{
+  "author_login": "Sanskaaar1",
+  "body": "## Summary\r\n- Classifies `TestEmbeddingNN` as `GENERIC` and `TestEmbeddingNNDeviceType` as `ACCELERATOR`\r\n- Migrates `test_embedding_max_norm_unsorted_repeating_indices` and `test_large_tensors` out of the manually-gated GENERIC class (`@unittest.skipIf(not TEST_CUDA and not TEST_XPU)`) into the ACCELERATOR class as proper device-parameterized tests run via `instantiate_device_type_tests`\r\n\r\n## Test plan\r\n```\r\npython test/nn/test_embedding.py -v\r\n```\r\nRan 337 tests, skipped=43. ",
+  "facts": {
+    "actionable_labelers": [],
+    "author_has_triage_permission": false,
+    "has_actionable_linked_issue": false,
+    "has_maintainer_activity": false,
+    "has_related_actionable_issue": false,
+    "has_supporter": false,
+    "is_already_handled": false,
+    "is_open_non_draft_pr_against_main": true,
+    "maintainer_requested_reviewers": [],
+    "supporters": []
+  },
+  "identity": {
+    "head_sha": "f04ca8e16c7bf69283010ae6ac623a6f9c7b421c",
+    "number": 193687,
+    "repository": "pytorch/pytorch",
+    "workflow_sha": "56c0db589b3b5963102e58867f06ed80b434bf1c"
+  },
+  "title": "Add hw_classification to test/nn/test_embedding.py"
+}

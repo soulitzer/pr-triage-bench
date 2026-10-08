@@ -217,7 +217,7 @@ def render_case_row(case: Case, /, *, owner: str, runs: list[PublishedRun]) -> s
             + (f"; {result.failed_runs} more runs failed validation" if result.failed_runs else "")
         )
         cells.append(
-            f'<td class="{css} run-start" data-run="{run.index}" title="{escape(tooltip)}">'
+            f'<td class="{css} run-start" data-run="{run.index}" data-tip="{escape(tooltip)}">'
             f"pass {result.passed}/{result.judged_runs}{failed}</td>"
         )
     return (
@@ -274,7 +274,7 @@ def render_grid_cell(
     rate = f"{numerator / denominator:.0%}" if denominator else "n/a"
     return (
         f'<span class="cell {css}{edge}" data-run="{run_index}" '
-        f'title="{escape(explain_metric(summary, field=field))}">{rate}'
+        f'data-tip="{escape(explain_metric(summary, field=field))}">{rate}'
         f'<span class="sub"> {numerator}/{denominator}</span></span>'
     )
 
@@ -329,7 +329,7 @@ def render_category_table(*, owners: list[str], cases: list[Case], runs: list[Pu
     )
     metric_heads = "".join(
         f'<span class="cell head{" run-start" if index == 0 else ""}" data-run="{run.index}" '
-        f'title="{escape(METRIC_DEFINITIONS[field])}">{label}</span>'
+        f'data-tip="{escape(METRIC_DEFINITIONS[field])}">{label}</span>'
         for run in runs
         for index, (label, field, _) in enumerate(METRICS)
     )
@@ -442,11 +442,18 @@ function render() {
   out.append(node("h3", "What differs"));
   const differs = node("ul");
   differs.append(node("li", "pipeline and config: " + a.source_label + " vs " + b.source_label + same(a.sha, b.sha)));
+  [a, b].filter(run => run.pr).forEach(run => {
+    const item = node("li");
+    const prLink = node("a", "PR #" + run.pr + "'s own changes");
+    prLink.href = "https://github.com/pytorch/pytorch/pull/" + run.pr + "/files";
+    item.append(prLink, document.createTextNode(" (" + run.name + ")"));
+    differs.append(item);
+  });
   if (a.sha !== b.sha) {
     const item = node("li");
-    const diffLink = node("a", "all file changes between the two commits on GitHub");
+    const diffLink = node("a", "file changes between the two commits on GitHub");
     diffLink.href = "https://github.com/pytorch/pytorch/compare/" + a.sha + "..." + b.sha;
-    item.append(diffLink);
+    item.append(diffLink, node("span", " (diffs from their common ancestor; for stacked ghstack PRs this also includes earlier PRs in the stack)", "sub"));
     differs.append(item);
   }
   out.append(differs);
@@ -469,7 +476,7 @@ function render() {
     const cls = !delta ? "" : (delta > 0) === higherIsBetter ? "better" : "worse";
     const shown = delta === null ? "-" : (delta > 0 ? "+" : "") + delta + " pts";
     const name = node("td", label);
-    name.title = definition;
+    name.dataset.tip = definition;
     metricRows.push(row([o, name, fmt(ra), fmt(rb), node("td", shown, cls)]));
   }));
   out.append(table(["category", "metric", a.name, b.name, "change"], metricRows));
@@ -507,6 +514,7 @@ def render_compare_section(*, cases: list[Case], runs: list[PublishedRun]) -> st
             {
                 "name": run.name,
                 "sha": run.meta["pytorch_sha"],
+                "pr": run.meta.get("pr"),
                 "source_label": run.source_label,
                 "descriptions": run.descriptions,
                 "metrics": {
@@ -583,7 +591,13 @@ def render_page(*, cases: list[Case], runs: list[PublishedRun]) -> str:
   td.desc ins {{ background: #dafbe1; color: #116329; text-decoration: none; }}
   .pickers {{ background: #f6f8fa; padding: 0.6rem 0.8rem; border: 1px solid #d0d7de; }}
   .slot {{ font-weight: 700; }}
-  [title] {{ cursor: help; }}
+  [data-tip] {{ position: relative; cursor: help; }}
+  [data-tip]:hover::after {{
+    content: attr(data-tip); position: absolute; left: 0; top: 100%; z-index: 20;
+    width: 24rem; white-space: normal; background: #1f2328; color: #fff;
+    padding: 0.45rem 0.6rem; border-radius: 6px; font-size: 0.8rem;
+    font-weight: normal; line-height: 1.4; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  }}
   td details summary {{ font-weight: normal; color: #0969da; }}
   .sub {{ color: #656d76; font-size: 0.85em; font-weight: normal; }}
 </style>

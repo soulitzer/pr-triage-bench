@@ -1,0 +1,31 @@
+{
+  "pr": 199968,
+  "title": "Document CI execution and contributor responsibilities",
+  "expected": {
+    "nn": "assign"
+  },
+  "tests": "",
+  "source": "reviewed",
+  "labeled_by": "albanD",
+  "labeled_at": "2026-10-06",
+  "reason": "",
+  "snapshot": {
+    "head_sha": "b9cc65eed5a5a9abd4b289d74af95989ae0ed23b",
+    "pytorch_sha": "13e6ce9871133c72dd43a40d3f6e2af73f419434",
+    "taken_at": "2026-10-08T20:03:39Z"
+  },
+  "bot_runs": [],
+  "reviewer_changes": [],
+  "reviews": [
+    {
+      "at": "2026-10-06T21:01:13Z",
+      "reviewer": "albanD",
+      "state": "COMMENTED"
+    },
+    {
+      "at": "2026-10-07T14:28:16Z",
+      "reviewer": "albanD",
+      "state": "APPROVED"
+    }
+  ]
+}

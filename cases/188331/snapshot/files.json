@@ -1,0 +1,14 @@
+[
+  {
+    "sha": "86cbffd79734b3f87f25c67b3d5f2c80f99dd5df",
+    "filename": "test/profiler/test_profiler_tree.py",
+    "status": "modified",
+    "additions": 12,
+    "deletions": 2,
+    "changes": 14,
+    "blob_url": "https://github.com/pytorch/pytorch/blob/d622028fdd4a0ff8a871b3f7298ce4f495c57184/test%2Fprofiler%2Ftest_profiler_tree.py",
+    "raw_url": "https://github.com/pytorch/pytorch/raw/d622028fdd4a0ff8a871b3f7298ce4f495c57184/test%2Fprofiler%2Ftest_profiler_tree.py",
+    "contents_url": "https://api.github.com/repos/pytorch/pytorch/contents/test%2Fprofiler%2Ftest_profiler_tree.py?ref=d622028fdd4a0ff8a871b3f7298ce4f495c57184",
+    "patch": "@@ -12,6 +12,7 @@\n import torch\n from torch._C._profiler import _ExtraFields_PyCall, _ExtraFields_PyCCall\n from torch.testing._internal.common_utils import (\n+    HardwareClassification,\n     IS_ARM64,\n     IS_WINDOWS,\n     run_tests,\n@@ -231,8 +232,7 @@ def to_string(frame_state):\n                     raise AssertionError(f\"{parent_name} vs. {caller_name}\")\n \n \n-@unittest.skipIf(IS_ARM64, \"Not working on ARM\")\n-class TestProfilerTree(TestCase):\n+class ProfilerTreeTestMixin:\n     def assertTreesMatch(self, actual: str, expected: str, allow_failure: bool = False):\n         # Warning: Here be dragons\n         #   Different platforms will have subtly different behavior for Python\n@@ -275,6 +275,11 @@ def assertTreesMatch(self, actual: str, expected: str, allow_failure: bool = Fal\n                 else:\n                     raise\n \n+\n+@unittest.skipIf(IS_ARM64, \"Not working on ARM\")\n+class TestProfilerTree(ProfilerTreeTestMixin, TestCase):\n+    hw_classification = HardwareClassification.GENERIC\n+\n     # TODO: Add logic for CUDA version of test\n     @ProfilerTree.test\n     @unittest.skipIf(\n@@ -787,6 +792,11 @@ def test_profiler_experimental_tree_with_stack_and_torch_dispatch(self):\n                   ...\"\"\",\n         )\n \n+\n+@unittest.skipIf(IS_ARM64, \"Not working on ARM\")\n+class TestProfilerTreeCUDA(ProfilerTreeTestMixin, TestCase):\n+    hw_classification = HardwareClassification.CUDA\n+\n     @unittest.skip(\"https://github.com/pytorch/pytorch/issues/83606\")\n     @unittest.skipIf(not torch.cuda.is_available(), \"CUDA is required\")\n     @ProfilerTree.test"
+  }
+]

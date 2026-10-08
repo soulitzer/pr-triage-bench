@@ -1,0 +1,26 @@
+{
+  "pr": 200165,
+  "title": "Add a REVIEW.md for torch/headeronly",
+  "expected": {
+    "autograd": "assign"
+  },
+  "tests": "",
+  "source": "reviewed",
+  "labeled_by": "soulitzer",
+  "labeled_at": "2026-10-07",
+  "reason": "",
+  "snapshot": {
+    "head_sha": "400af61820a6b704290201f465689650a49dc18a",
+    "pytorch_sha": "13e6ce9871133c72dd43a40d3f6e2af73f419434",
+    "taken_at": "2026-10-08T20:04:53Z"
+  },
+  "bot_runs": [],
+  "reviewer_changes": [],
+  "reviews": [
+    {
+      "at": "2026-10-07T20:28:56Z",
+      "reviewer": "soulitzer",
+      "state": "APPROVED"
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "author_login": "vineethsaivs",
+  "body": "Fixes #130641.\n\n`torch.flip`'s docstring describes `dims` as:\n\n```\ndims (a list or tuple): axis to flip on\n```\n\n`dims` is a list/tuple of dimensions, so \"axis\" should be plural (\"axes\"), and the element type can be named, consistent with how `torch.permute` documents its `dims` argument (`tuple of int or list of int`). `torch.rot90` in the same file has the identical wording (`axis to rotate`), so this fixes both:\n\n```\n- dims (a list or tuple): axis to flip on\n+ dims (a list or tuple of ints): axes to flip on\n\n- dims (a list or tuple): axis to rotate. Default value is [0, 1]\n+ dims (a list or tuple of ints): axes to rotate. Default value is [0, 1]\n```\n\nDocstring-only, no runtime change. (Like `torch.permute`'s functional docstring, this documents the list/tuple form; the positional-varargs convenience for single `int[]` arguments is a general behavior not spelled out at the functional level.)\n",
+  "facts": {
+    "actionable_labelers": [],
+    "author_has_triage_permission": false,
+    "has_actionable_linked_issue": false,
+    "has_maintainer_activity": true,
+    "has_related_actionable_issue": false,
+    "has_supporter": false,
+    "is_already_handled": false,
+    "is_open_non_draft_pr_against_main": true,
+    "maintainer_requested_reviewers": [],
+    "supporters": []
+  },
+  "identity": {
+    "head_sha": "abe6e46803f4302d9f5aae4ee97451e42490eae7",
+    "number": 188291,
+    "repository": "pytorch/pytorch",
+    "workflow_sha": "13e6ce9871133c72dd43a40d3f6e2af73f419434"
+  },
+  "title": "Fix dims docstring for torch.flip and torch.rot90 (axes, element type)"
+}

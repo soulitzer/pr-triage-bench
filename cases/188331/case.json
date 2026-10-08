@@ -1,0 +1,27 @@
+{
+  "pr": 188331,
+  "title": "[TEST] Refactor test_profiler_tree.py with hw_classification",
+  "expected": {
+    "accelerator_test_refactoring": "assign",
+    "nn": "not_assign"
+  },
+  "tests": "Clause (1): adding HardwareClassification labels to a profiler test file. Also: a test refactor outside nn tests does not go to nn.",
+  "source": "hand-picked",
+  "labeled_by": "soulitzer",
+  "labeled_at": "2026-10-08",
+  "reason": "Refactors test/profiler/test_profiler_tree.py with hw_classification. Not an nn test file, so nn should not be assigned: nn owns refactors of nn tests only (soulitzer, 2026-10-08).",
+  "snapshot": {
+    "head_sha": "d622028fdd4a0ff8a871b3f7298ce4f495c57184",
+    "pytorch_sha": "13e6ce9871133c72dd43a40d3f6e2af73f419434",
+    "taken_at": "2026-10-08T20:04:20Z"
+  },
+  "bot_runs": [],
+  "reviewer_changes": [],
+  "reviews": [
+    {
+      "at": "2026-07-07T18:05:12Z",
+      "reviewer": "jbschlosser",
+      "state": "CHANGES_REQUESTED"
+    }
+  ]
+}

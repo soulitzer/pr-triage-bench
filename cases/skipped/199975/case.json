@@ -1,0 +1,26 @@
+{
+  "pr": 199975,
+  "title": "[CODEOWNERS] Annotate path groups with their GitHub labels",
+  "expected": {
+    "autograd": "assign"
+  },
+  "tests": "",
+  "source": "reviewed",
+  "labeled_by": "soulitzer",
+  "labeled_at": "2026-10-06",
+  "reason": "",
+  "snapshot": {
+    "head_sha": "e0bb4841e1e209c7c525d33c64f157d83bad456f",
+    "pytorch_sha": "13e6ce9871133c72dd43a40d3f6e2af73f419434",
+    "taken_at": "2026-10-08T20:04:40Z"
+  },
+  "bot_runs": [],
+  "reviewer_changes": [],
+  "reviews": [
+    {
+      "at": "2026-10-06T21:46:35Z",
+      "reviewer": "soulitzer",
+      "state": "COMMENTED"
+    }
+  ]
+}

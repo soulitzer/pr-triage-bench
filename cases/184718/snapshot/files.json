@@ -1,0 +1,14 @@
+[
+  {
+    "sha": "7292fd0e8b6830f15252c125adceaef6ca82a14d",
+    "filename": "test/test_testing.py",
+    "status": "modified",
+    "additions": 5,
+    "deletions": 3,
+    "changes": 8,
+    "blob_url": "https://github.com/pytorch/pytorch/blob/cffc78d336c19945b0424cd436229b52b08f9cda/test%2Ftest_testing.py",
+    "raw_url": "https://github.com/pytorch/pytorch/raw/cffc78d336c19945b0424cd436229b52b08f9cda/test%2Ftest_testing.py",
+    "contents_url": "https://api.github.com/repos/pytorch/pytorch/contents/test%2Ftest_testing.py?ref=cffc78d336c19945b0424cd436229b52b08f9cda",
+    "patch": "@@ -457,8 +457,8 @@ def test_get_supported_dtypes(self, device):\n             dynamic_dispatch = opinfo.utils.dtypes_dispatch_hint(dynamic_dtypes)\n             if self.device_type == 'cpu':\n                 dtypes = op.dtypes\n-            else:  # device_type ='cuda'\n-                dtypes = op.dtypesIfCUDA\n+            else:\n+                dtypes = op.supported_dtypes(self.device_type)\n \n             self.assertTrue(set(dtypes) == set(dynamic_dtypes))\n             self.assertTrue(set(dtypes) == set(dynamic_dispatch.dispatch_fn()))\n@@ -990,7 +990,9 @@ def test_mismatching_device_no_check(self, devices):\n                 fn(check_device=False)\n \n \n-instantiate_device_type_tests(TestAssertCloseMultiDevice, globals(), only_for=\"cuda\")\n+instantiate_device_type_tests(\n+    TestAssertCloseMultiDevice, globals(), except_for=[\"cpu\"], allow_xpu=True\n+)\n \n \n class TestAssertCloseErrorMessage(TestCase):"
+  }
+]

@@ -1,0 +1,23 @@
+{
+  "author_login": "jansel",
+  "body": "Stack from [ghstack](https://github.com/ezyang/ghstack/tree/0.17.0) (oldest at bottom):\n* __->__ #185916\n\nFlexAttention lowers score_mod indexing through ModIndex, so a score_mod such as\ntable[idx][j] on a captured tensor that requires grad produces nested\nzeros_and_scatter calls in the joint backward graph:\n\n    zeros_and_scatter(shape, [idx], zeros_and_scatter(inner_shape, [j], grad))\n\nInductor's validate_joint_graph rejects any zeros_and_scatter whose result\nfeeds something other than the graph output, so the compiled backward raised\nNotImplementedError even though the graph is equivalent to the backward of\ntable[idx, j].\n\nBefore validating the joint graph, run a FlexAttention-local\nPatternMatcherPass that rewrites the nested pair into a single\nzeros_and_scatter(shape, [idx, j], grad). The rewrite fires only when\nshape[len(indices):] is statically equal to inner_shape (via sym_eq, so it\nalso works with dynamic shapes), and repeats until no match is left so longer\nchains collapse. Anything that still leaves an intermediate scatter, such as\n(table[idx] * 2)[0], is still rejected by the existing validator, whose message\nnow also suggests merging the indices into one indexing expression.\n\nThis fix is compiled-only. Eager and aot_eager still fail in the\nzeros_and_scatter vmap rule for the nested pattern, so this does not fully\nresolve #146896. An earlier revision of this PR also rewrote and validated the\njoint graph in the HOP to cover eager. Review judged that extra complexity not\nworth it, because writing table[idx, j] already avoids the problem.\n\nAuthored with an AI assistant (Claude).\n\nTest Plan:\n\n```\npython test/inductor/test_flex_attention.py -k index_backward\npython test/inductor/test_flex_attention.py -k test_symmetric_bias\nlintrunner -a\n```\n\nThe new nested-index tests fail with the validator's NotImplementedError when\nthe new pass is disabled. The shape_1_index_0 case is the pattern from #146896.\nOn that repro, eager and aot_eager still raise the vmap rule's AssertionError.\n\ncc @voznesenskym @penguinwu @EikanWang @jgong5 @Guobing-Chen @XiaobingSuper @zhuhaozhe @blzheng @wenzhe-nrv @jiayisunx @ipiszy @kadeng @muchulee8 @amjames @chauhang @aakhundov @coconutruben @jataylo",
+  "facts": {
+    "actionable_labelers": [],
+    "author_has_triage_permission": false,
+    "has_actionable_linked_issue": false,
+    "has_maintainer_activity": false,
+    "has_related_actionable_issue": false,
+    "has_supporter": false,
+    "is_already_handled": false,
+    "is_open_non_draft_pr_against_main": true,
+    "maintainer_requested_reviewers": [],
+    "supporters": []
+  },
+  "identity": {
+    "head_sha": "b8195bcc9c53a5c525fbf85bfbde8f3f1bf2e821",
+    "number": 185916,
+    "repository": "pytorch/pytorch",
+    "workflow_sha": "13e6ce9871133c72dd43a40d3f6e2af73f419434"
+  },
+  "title": "Fix FlexAttention nested index backward in Inductor"
+}

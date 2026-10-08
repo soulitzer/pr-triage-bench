@@ -1,0 +1,23 @@
+{
+  "author_login": "RiyaP2508",
+  "body": "## Summary\r\n\r\nThis PR removes CUDA-specific assumptions from `test/test_testing.py` to enable out-of-tree accelerator backends to run these tests.\r\n\r\n**Changes:**\r\n\r\n1. **`test_get_supported_dtypes`**: The `else` branch previously hardcoded `op.dtypesIfCUDA`, which would return incorrect dtypes for any non-CUDA accelerator. Replaced with `op.supported_dtypes(self.device_type)`, the canonical device-agnostic API that routes through the OpInfo `dtypesIf` dict.\r\n\r\n2. **`TestAssertCloseMultiDevice`**: Changed `instantiate_device_type_tests` from `only_for=\"cuda\"` to `except_for=[\"cpu\"], allow_xpu=True`. The class body is already fully device-generic (uses `@deviceCountAtLeast(1)` + `itertools.permutations` over `(\"cpu\", *devices)`), so the only CUDA coupling was the instantiation filter.\r\n\r\n**What stays unchanged:**\r\n- The 3 `@onlyCUDA` CUDA-assert subprocess tests remain CUDA-only - they test CUDA/ROCm-specific error handling (device-side assert triggered) and are not generalizable.\r\n- `@onlyNativeDeviceTypes` decorators are kept - `NATIVE_DEVICES` already includes PrivateUse1, so OOT backends run these automatically.\r\n\r\n## Test plan\r\n- [x] `test_get_supported_dtypes` passes on CPU and CUDA\r\n- [x] `TestAssertCloseMultiDevice` (2 tests) passes on CUDA\r\n- [x] Full test suite: 86 passed, 7 expected skips, no regressions\r\n\r\ncc @albanD @fffrog @jbschlosser @mansiag05 ",
+  "facts": {
+    "actionable_labelers": [],
+    "author_has_triage_permission": true,
+    "has_actionable_linked_issue": false,
+    "has_maintainer_activity": true,
+    "has_related_actionable_issue": false,
+    "has_supporter": false,
+    "is_already_handled": false,
+    "is_open_non_draft_pr_against_main": true,
+    "maintainer_requested_reviewers": [],
+    "supporters": []
+  },
+  "identity": {
+    "head_sha": "cffc78d336c19945b0424cd436229b52b08f9cda",
+    "number": 184718,
+    "repository": "pytorch/pytorch",
+    "workflow_sha": "13e6ce9871133c72dd43a40d3f6e2af73f419434"
+  },
+  "title": "[Test] Make test_testing.py device-agnostic for out-of-tree accelerators"
+}

@@ -1,0 +1,43 @@
+{
+  "pr": 199737,
+  "title": "[docs] Document CUDA-to-CPU transfers on NVLink-C2C systems",
+  "expected": {
+    "nn": "assign"
+  },
+  "tests": "",
+  "source": "reviewed",
+  "labeled_by": "albanD",
+  "labeled_at": "2026-10-07",
+  "reason": "",
+  "snapshot": {
+    "head_sha": "c368a9100f2b9e9f8fc95b1ada3f97fc98a39a2f",
+    "pytorch_sha": "13e6ce9871133c72dd43a40d3f6e2af73f419434",
+    "taken_at": "2026-10-08T20:03:56Z"
+  },
+  "bot_runs": [
+    {
+      "run_id": 37281081351,
+      "created_at": "2026-10-05T08:01:33Z",
+      "head_sha": "1b0054938da2acfc44091d46de36f99c18832721",
+      "additional_owners": []
+    }
+  ],
+  "reviewer_changes": [],
+  "reviews": [
+    {
+      "at": "2026-10-07T15:35:10Z",
+      "reviewer": "albanD",
+      "state": "COMMENTED"
+    },
+    {
+      "at": "2026-10-08T14:37:45Z",
+      "reviewer": "albanD",
+      "state": "COMMENTED"
+    },
+    {
+      "at": "2026-10-08T14:43:02Z",
+      "reviewer": "albanD",
+      "state": "COMMENTED"
+    }
+  ]
+}

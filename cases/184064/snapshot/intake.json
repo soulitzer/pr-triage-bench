@@ -1,0 +1,23 @@
+{
+  "author_login": "adotdong29",
+  "body": "## Issue\n\nFixes #170798\n\n## Summary\n\n`F.pad` declares `value` as `float?`, so a Python int whose magnitude\nexceeds `2**53` is silently truncated when it crosses into the C++\nbinding. For integer tensors with an integer fill value, dispatch\ndirectly to `constant_pad_nd`, which takes a `Scalar` and preserves\nthe value. `native_functions.yaml` is unchanged, so no FC freeze\napplies. This is the Python-side approach @mikaylagawarecki suggested\non the prior attempt #171418.\n\nRegression test in `TestConstantPadNd` covers `2**53 + 1`,\n`-(2**53 + 1)`, `int64.max`, and `int64.min`. Without this patch,\n3 of the 4 subtests fail on `main`.\n\n## Checklist\n\n- [x] Passes lint (`lintrunner -a`)\n- [x] Added/updated tests\n- [ ] Updated documentation (not applicable)\n- [ ] Included benchmark results (not applicable)\n\n## BC-breaking?\n\nNo",
+  "facts": {
+    "actionable_labelers": [],
+    "author_has_triage_permission": false,
+    "has_actionable_linked_issue": false,
+    "has_maintainer_activity": false,
+    "has_related_actionable_issue": false,
+    "has_supporter": false,
+    "is_already_handled": false,
+    "is_open_non_draft_pr_against_main": true,
+    "maintainer_requested_reviewers": [],
+    "supporters": []
+  },
+  "identity": {
+    "head_sha": "c5b1cc644ee143b24081453970815aebced25a0c",
+    "number": 184064,
+    "repository": "pytorch/pytorch",
+    "workflow_sha": "13e6ce9871133c72dd43a40d3f6e2af73f419434"
+  },
+  "title": "Fix silent int64 precision loss in F.pad constant mode"
+}

@@ -1,0 +1,26 @@
+[
+  {
+    "sha": "b69072f6997f84f5719f87a0c1c77777f756b144",
+    "filename": "test/inductor/test_flex_gemm.py",
+    "status": "modified",
+    "additions": 24,
+    "deletions": 4,
+    "changes": 28,
+    "blob_url": "https://github.com/pytorch/pytorch/blob/263b57039938579f6bf5a2d77847a11210f40ec9/test%2Finductor%2Ftest_flex_gemm.py",
+    "raw_url": "https://github.com/pytorch/pytorch/raw/263b57039938579f6bf5a2d77847a11210f40ec9/test%2Finductor%2Ftest_flex_gemm.py",
+    "contents_url": "https://api.github.com/repos/pytorch/pytorch/contents/test%2Finductor%2Ftest_flex_gemm.py?ref=263b57039938579f6bf5a2d77847a11210f40ec9",
+    "patch": "@@ -40,6 +40,7 @@\n     SM100OrLater,\n     SM120OrLater,\n     TEST_CUDA,\n+    xfailIfSM120OrLater,\n )\n from torch.testing._internal.common_device_type import instantiate_device_type_tests\n from torch.testing._internal.common_quantized import (\n@@ -748,6 +749,22 @@ def test_quack_feed_main_host_guards_match_runtime_contract(self):\n \n         self.assertEqual(LOCAL_REDUCE_FRAGMENT_WIDTH, GROUPED_FRAGMENT_WIDTH)\n \n+    @unittest.skipUnless(importlib.util.find_spec(\"cutlass\"), \"requires CuTeDSL\")\n+    def test_grouped_n_reduce_rejects_sm120_config(self):\n+        from torch._inductor.kernel.flex_gemm.quack_ops.grouped_reduce import (\n+            grouped_reduce_supports_config,\n+        )\n+        from torch._vendor.quack.gemm_config import GemmConfig\n+\n+        sm100 = GemmConfig(\n+            tile_m=128, tile_n=128, cluster_m=1, pingpong=False, device_capacity=10\n+        )\n+        sm120 = dataclasses.replace(sm100, pingpong=True, device_capacity=12)\n+        self.assertTrue(grouped_reduce_supports_config(sm100, axis=1, group=32))\n+        self.assertFalse(grouped_reduce_supports_config(sm120, axis=1, group=16))\n+        self.assertFalse(grouped_reduce_supports_config(sm120, axis=1, group=32))\n+        self.assertTrue(grouped_reduce_supports_config(sm120, axis=0, group=32))\n+\n     def test_post_grad_addmm_fusion_preserves_flex_gemm_body_mm(self):\n         from torch._higher_order_ops.flex_gemm import mark_flex_gemm_body_gemm_node\n         from torch._inductor.fx_passes.post_grad import is_valid_addmm_fusion\n@@ -6832,6 +6849,7 @@ def fn(a, b):\n     @skipIfNoCuteDSL\n     @unittest.skipIf(not TEST_CUDA, \"CUDA required\")\n     @unittest.skipIf(not SM100OrLater, \"SM100+ required\")\n+    @xfailIfSM120OrLater\n     @parametrize(\n         \"case\",\n         (\n@@ -6946,10 +6964,12 @@ def second_epilogue(acc):\n         gamma = self.makeTensor(1, n)\n         b2 = self.makeTensor(n, p)\n \n-        with self.assertRaisesRegex(\n-            Exception,\n-            \"requested group=1024, max supported group=512 for axis=1\",\n-        ):\n+        error = (\n+            \"grouped N reduce is not supported on SM120\"\n+            if SM120OrLater\n+            else \"requested group=1024, max supported group=512 for axis=1\"\n+        )\n+        with self.assertRaisesRegex(Exception, error):\n             torch.compile(fn, backend=\"inductor\", fullgraph=True)(a, b1, gamma, b2)\n \n     @skipIfNoCuteDSL"
+  },
+  {
+    "sha": "4e119dd6a1bcbec5ad6bedb8f222b3e8965cba43",
+    "filename": "torch/_inductor/kernel/flex_gemm/quack_ops/grouped_reduce.py",
+    "status": "modified",
+    "additions": 4,
+    "deletions": 0,
+    "changes": 4,
+    "blob_url": "https://github.com/pytorch/pytorch/blob/263b57039938579f6bf5a2d77847a11210f40ec9/torch%2F_inductor%2Fkernel%2Fflex_gemm%2Fquack_ops%2Fgrouped_reduce.py",
+    "raw_url": "https://github.com/pytorch/pytorch/raw/263b57039938579f6bf5a2d77847a11210f40ec9/torch%2F_inductor%2Fkernel%2Fflex_gemm%2Fquack_ops%2Fgrouped_reduce.py",
+    "contents_url": "https://api.github.com/repos/pytorch/pytorch/contents/torch%2F_inductor%2Fkernel%2Fflex_gemm%2Fquack_ops%2Fgrouped_reduce.py?ref=263b57039938579f6bf5a2d77847a11210f40ec9",
+    "patch": "@@ -197,6 +197,8 @@ def grouped_reduce_supports_config(config, axis: int, group: int) -> bool:\n         if axis == 0 or getattr(config, \"device_capacity\", None) != 10:\n             return False\n         axis = 1 - axis\n+    if axis == 1 and config.device_capacity == 12:\n+        return False\n     tile = config.tile_m if axis == 0 else config.tile_n\n     if config.tile_m < 128 or config.tile_n % GROUPED_FRAGMENT_WIDTH or tile % group:\n         return False\n@@ -621,6 +623,8 @@ def supports_config(self, config) -> bool:\n \n     def config_support_error(self, configs) -> str:\n         \"\"\"Describe an unsupported group or caller-owned output layout.\"\"\"\n+        if self.axis == 1 and all(config.device_capacity == 12 for config in configs):\n+            return \"grouped N reduce is not supported on SM120\"\n         if (\n             self.output_layout is not None\n             and self.output_layout.supports_config_fn is not None"
+  }
+]

@@ -1,0 +1,26 @@
+{
+  "pr": 199956,
+  "title": "Define \"ready for review\" and move the label decision out of the automated review",
+  "expected": {
+    "nn": "assign"
+  },
+  "tests": "",
+  "source": "reviewed",
+  "labeled_by": "albanD",
+  "labeled_at": "2026-10-06",
+  "reason": "",
+  "snapshot": {
+    "head_sha": "aa874b0b33e6535fac477822f53685a03c76c09c",
+    "pytorch_sha": "13e6ce9871133c72dd43a40d3f6e2af73f419434",
+    "taken_at": "2026-10-08T20:03:49Z"
+  },
+  "bot_runs": [],
+  "reviewer_changes": [],
+  "reviews": [
+    {
+      "at": "2026-10-06T21:11:16Z",
+      "reviewer": "albanD",
+      "state": "COMMENTED"
+    }
+  ]
+}

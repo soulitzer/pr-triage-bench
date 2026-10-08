@@ -1,0 +1,25 @@
+{
+  "author_login": "LuFinch",
+  "body": "This is the second PR split from https://github.com/pytorch/pytorch/pull/156272\r\ncc @jgong5 @mingfeima @XiaobingSuper @sanchitintel @ashokei @jingxu10 @jerryzh168 @aditew01 @gujinghui @PenghuiCheng @jianyuh @min-jean-cho @yanbing-j @Guobing-Chen @Xia-Weiwen @snadampal @voznesenskym @penguinwu @EikanWang @zhuhaozhe @blzheng @wenzhe-nrv @jiayisunx @ipiszy @kadeng @muchulee8 @amjames @chauhang @aakhundov @coconutruben @jataylo",
+  "facts": {
+    "actionable_labelers": [],
+    "author_has_triage_permission": false,
+    "has_actionable_linked_issue": false,
+    "has_maintainer_activity": true,
+    "has_related_actionable_issue": false,
+    "has_supporter": false,
+    "is_already_handled": false,
+    "is_open_non_draft_pr_against_main": true,
+    "maintainer_requested_reviewers": [
+      "angelayi"
+    ],
+    "supporters": []
+  },
+  "identity": {
+    "head_sha": "6474f3d0029022eeb8072dc427c79e4016c405f8",
+    "number": 162454,
+    "repository": "pytorch/pytorch",
+    "workflow_sha": "13e6ce9871133c72dd43a40d3f6e2af73f419434"
+  },
+  "title": "[xpu][feature] Integrate OneDNN SDPA training forward/backward into XPU OVERRIDEABLE Backend"
+}

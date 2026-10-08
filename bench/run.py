@@ -175,6 +175,24 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+# Settings that must match for new cases to join an existing run.
+RUN_IDENTITY = ("pytorch_sha", "model", "effort", "reps")
+
+
+def load_previous_results(out_dir: Path, /, *, meta: dict[str, Any]) -> list[dict[str, Any]]:
+    """Return an earlier run's records in out_dir, refusing if its settings differ."""
+
+    meta_path = out_dir / "meta.json"
+    results_path = out_dir / "results.jsonl"
+    if not (meta_path.exists() and results_path.exists()):
+        return []
+    previous = json.loads(meta_path.read_text())
+    mismatched = [key for key in RUN_IDENTITY if previous.get(key) != meta[key]]
+    if mismatched:
+        raise SystemExit(f"{out_dir} holds a run with different {', '.join(mismatched)}; use a new --name")
+    return [json.loads(line) for line in results_path.read_text().splitlines()]
+
+
 def main() -> None:
     args = parse_args()
     prs = args.prs or [case.pr for case in load_cases()]
@@ -188,6 +206,15 @@ def main() -> None:
         effort=args.effort,
         env=dict(os.environ),
     )
+    meta = source.to_meta() | {
+        "model": args.model,
+        "effort": args.effort,
+        "reps": args.reps,
+        "categories": sorted(
+            json.loads((settings.pipeline_root / ".github/auto-pr-triage/extra_ownership_metadata.json").read_text())
+        ),
+    }
+    previous = load_previous_results(out_dir, meta=meta)
     built = [pr for pr in prs if build_input(pr, settings=settings)]
     for pr in sorted(set(prs) - set(built)):
         print(f"#{pr}: building the worker input failed; see {out_dir / str(pr) / 'build.log'}")
@@ -198,26 +225,12 @@ def main() -> None:
                 [(pr, rep) for pr in built for rep in range(1, args.reps + 1)],
             )
         )
-    (out_dir / "results.jsonl").write_text("".join(json.dumps(r) + "\n" for r in records))
-    (out_dir / "meta.json").write_text(
-        json.dumps(
-            source.to_meta()
-            | {
-                "model": args.model,
-                "effort": args.effort,
-                "reps": args.reps,
-                "cases": built,
-                "categories": sorted(
-                    json.loads(
-                        (settings.pipeline_root / ".github/auto-pr-triage/extra_ownership_metadata.json").read_text()
-                    )
-                ),
-            },
-            indent=2,
-        )
-        + "\n"
-    )
-    print(f"wrote {out_dir / 'results.jsonl'}")
+    # Cases run before and not re-run now keep their earlier results.
+    merged = [r for r in previous if r["pr"] not in set(built)] + records
+    (out_dir / "results.jsonl").write_text("".join(json.dumps(r) + "\n" for r in merged))
+    meta["cases"] = sorted({r["pr"] for r in merged})
+    (out_dir / "meta.json").write_text(json.dumps(meta, indent=2) + "\n")
+    print(f"wrote {out_dir / 'results.jsonl'}: {len(records)} new records, {len(merged)} total")
 
 
 if __name__ == "__main__":

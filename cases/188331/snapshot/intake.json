@@ -1,0 +1,23 @@
+{
+  "author_login": "mansiag05",
+  "body": "Extract duplicated assertTreesMatch helper into a\r\nProfilerTreeTestMixin shared by both test classes, and add hw_classification attributes: GENERIC for TestProfilerTree, CUDA for TestProfilerTreeCUDA.\r\n\r\nTest Cases:\r\nBefore and after:\r\n10 tests collected.\r\n3 passed, 7 skipped.",
+  "facts": {
+    "actionable_labelers": [],
+    "author_has_triage_permission": false,
+    "has_actionable_linked_issue": false,
+    "has_maintainer_activity": false,
+    "has_related_actionable_issue": false,
+    "has_supporter": false,
+    "is_already_handled": false,
+    "is_open_non_draft_pr_against_main": true,
+    "maintainer_requested_reviewers": [],
+    "supporters": []
+  },
+  "identity": {
+    "head_sha": "d622028fdd4a0ff8a871b3f7298ce4f495c57184",
+    "number": 188331,
+    "repository": "pytorch/pytorch",
+    "workflow_sha": "13e6ce9871133c72dd43a40d3f6e2af73f419434"
+  },
+  "title": "[TEST] Refactor test_profiler_tree.py with hw_classification"
+}

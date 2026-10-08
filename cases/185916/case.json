@@ -1,0 +1,36 @@
+{
+  "pr": 185916,
+  "title": "Fix FlexAttention nested index backward in Inductor",
+  "expected": {
+    "flex_attention": "assign"
+  },
+  "tests": "Kernels clause: a fix to the FlexAttention kernel in Inductor (backward with nested indexing).",
+  "source": "reviewed",
+  "labeled_by": "drisspg",
+  "labeled_at": "2026-10-07",
+  "reason": "Changes torch/_inductor/kernel/flex/flex_attention.py with a test in test_flex_attention.py; reviewed and approved by drisspg.",
+  "snapshot": {
+    "head_sha": "b8195bcc9c53a5c525fbf85bfbde8f3f1bf2e821",
+    "pytorch_sha": "13e6ce9871133c72dd43a40d3f6e2af73f419434",
+    "taken_at": "2026-10-08T20:05:34Z"
+  },
+  "bot_runs": [],
+  "reviewer_changes": [],
+  "reviews": [
+    {
+      "at": "2026-10-07T22:26:49Z",
+      "reviewer": "drisspg",
+      "state": "CHANGES_REQUESTED"
+    },
+    {
+      "at": "2026-10-08T00:42:31Z",
+      "reviewer": "drisspg",
+      "state": "COMMENTED"
+    },
+    {
+      "at": "2026-10-08T13:29:48Z",
+      "reviewer": "drisspg",
+      "state": "APPROVED"
+    }
+  ]
+}

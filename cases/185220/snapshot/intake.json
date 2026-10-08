@@ -1,0 +1,23 @@
+{
+  "author_login": "RiyaP2508",
+  "body": "## Summary\r\n\r\nMake `test_wrap_inductor_compiled_regions.py` device-agnostic by using `instantiate_device_type_tests` to generate device-specific test subclasses.\r\n\r\n## Changes\r\n\r\n- Use `instantiate_device_type_tests` with `only_for=(\"cuda\", \"xpu\")` to generate device-specific test subclasses.\r\n- Add `device` parameter to 20 accelerator tests and replace 45 hardcoded `device=\"cuda\"` with `device=device`.\r\n- Move 3 CPU-only tests (`test_fake_tensor_mode_works`, `test_proxy_tensor_mode_works`, `test_sac_cached_value_fifo_mismatch`) to a separate `TestWrapInductorCompiledRegionsCPU` class since they don't require a GPU device.\r\n- Keep `@requires_cuda_and_triton` on all 20 accelerator tests since Inductor GPU codegen requires Triton.\r\n\r\n## Test plan\r\n\r\n- [x] `TEST_CONFIG=cuda python3 test/run_test.py -i dynamo/test_wrap_inductor_compiled_regions` \u2014 22/23 passed\r\n- [x] 1 pre-existing failure (`test_sac_cached_value_fifo_mismatch`) also fails on unmodified main \u2014 unrelated to this change\r\n\r\ncc: @fffrog @albanD @jbschlosser @guilhermeleobas @Lucaskabela @zou3519 @mansiag05 \n\ncc @voznesenskym @penguinwu @EikanWang @jgong5 @Guobing-Chen @XiaobingSuper @zhuhaozhe @blzheng @wenzhe-nrv @jiayisunx @kadeng @chauhang @amjames @jataylo @azahed98",
+  "facts": {
+    "actionable_labelers": [],
+    "author_has_triage_permission": true,
+    "has_actionable_linked_issue": false,
+    "has_maintainer_activity": true,
+    "has_related_actionable_issue": false,
+    "has_supporter": false,
+    "is_already_handled": false,
+    "is_open_non_draft_pr_against_main": true,
+    "maintainer_requested_reviewers": [],
+    "supporters": []
+  },
+  "identity": {
+    "head_sha": "1054d5c30e7f83d14014934bb9b79b72357d4eeb",
+    "number": 185220,
+    "repository": "pytorch/pytorch",
+    "workflow_sha": "13e6ce9871133c72dd43a40d3f6e2af73f419434"
+  },
+  "title": "[Test] Make test_wrap_inductor_compiled_regions.py device-agnostic for out-of-tree backends"
+}

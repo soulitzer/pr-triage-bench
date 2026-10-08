@@ -1,0 +1,26 @@
+{
+  "pr": 200198,
+  "title": "Add REVIEW.md for torch/csrc/stable",
+  "expected": {
+    "autograd": "assign"
+  },
+  "tests": "",
+  "source": "reviewed",
+  "labeled_by": "soulitzer",
+  "labeled_at": "2026-10-07",
+  "reason": "",
+  "snapshot": {
+    "head_sha": "f079a092efab2250a1640152dbe57c52b3198145",
+    "pytorch_sha": "13e6ce9871133c72dd43a40d3f6e2af73f419434",
+    "taken_at": "2026-10-08T20:04:43Z"
+  },
+  "bot_runs": [],
+  "reviewer_changes": [],
+  "reviews": [
+    {
+      "at": "2026-10-07T22:58:33Z",
+      "reviewer": "soulitzer",
+      "state": "APPROVED"
+    }
+  ]
+}

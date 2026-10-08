@@ -1,0 +1,26 @@
+{
+  "pr": 196667,
+  "title": "[Cutedsl][CUDA] Fix some flexgemm configs for sm120",
+  "expected": {
+    "flex_attention": "not_assign"
+  },
+  "tests": "Name lookalike: flexgemm (CuTeDSL grouped GEMM) configs, which share the 'flex' prefix but are not FlexAttention.",
+  "source": "hand-picked",
+  "labeled_by": "soulitzer",
+  "labeled_at": "2026-10-08",
+  "reason": "Only touches torch/_inductor/kernel/flex_gemm/ and test_flex_gemm.py. drisspg reviewed it, but the change is to a GEMM kernel, not FlexAttention.",
+  "snapshot": {
+    "head_sha": "263b57039938579f6bf5a2d77847a11210f40ec9",
+    "pytorch_sha": "13e6ce9871133c72dd43a40d3f6e2af73f419434",
+    "taken_at": "2026-10-08T20:05:30Z"
+  },
+  "bot_runs": [],
+  "reviewer_changes": [],
+  "reviews": [
+    {
+      "at": "2026-09-29T22:03:54Z",
+      "reviewer": "drisspg",
+      "state": "APPROVED"
+    }
+  ]
+}

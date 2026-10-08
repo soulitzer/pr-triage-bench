@@ -1,0 +1,33 @@
+{
+  "pr": 199781,
+  "title": "[native-dsl] Use `has_torch_function` in place of `check_has_torch_function` in `const_data_ptr`",
+  "expected": {
+    "nn": "assign"
+  },
+  "tests": "",
+  "source": "reviewed",
+  "labeled_by": "albanD",
+  "labeled_at": "2026-10-06",
+  "reason": "",
+  "snapshot": {
+    "head_sha": "12d290b177c1bf8427ae721542c97605284f1bcd",
+    "pytorch_sha": "13e6ce9871133c72dd43a40d3f6e2af73f419434",
+    "taken_at": "2026-10-08T20:04:01Z"
+  },
+  "bot_runs": [
+    {
+      "run_id": 37344126143,
+      "created_at": "2026-10-05T16:52:18Z",
+      "head_sha": "f436624eddba1de2d55daf1be2e32ae0847ced63",
+      "additional_owners": []
+    }
+  ],
+  "reviewer_changes": [],
+  "reviews": [
+    {
+      "at": "2026-10-06T18:58:39Z",
+      "reviewer": "albanD",
+      "state": "APPROVED"
+    }
+  ]
+}

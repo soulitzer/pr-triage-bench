@@ -1,0 +1,26 @@
+[
+  {
+    "sha": "a4dae459d38b35b06b3e99f65035e3461579922e",
+    "filename": "test/test_overrides.py",
+    "status": "modified",
+    "additions": 6,
+    "deletions": 0,
+    "changes": 6,
+    "blob_url": "https://github.com/pytorch/pytorch/blob/12d290b177c1bf8427ae721542c97605284f1bcd/test%2Ftest_overrides.py",
+    "raw_url": "https://github.com/pytorch/pytorch/raw/12d290b177c1bf8427ae721542c97605284f1bcd/test%2Ftest_overrides.py",
+    "contents_url": "https://api.github.com/repos/pytorch/pytorch/contents/test%2Ftest_overrides.py?ref=12d290b177c1bf8427ae721542c97605284f1bcd",
+    "patch": "@@ -1995,6 +1995,12 @@ def test_simple(self):\n         call_log_str = '\\n'.join(f\"{entry[0]}\" for entry in filtered)\n         self.assertExpectedInline(call_log_str, \"\"\"bar\"\"\")\n \n+    def test_const_data_ptr(self):\n+        x = torch.ones(1)\n+        wrapped = RedispatchTensor(x)\n+        self.assertEqual(wrapped.const_data_ptr(), x.const_data_ptr())\n+        self.assertEqual(len(wrapped.call_log), 1)\n+\n     def test_skip_to_inner(self):\n         call_log = []\n         x = RedispatchTensor(torch.full((1,), 1), call_log=call_log)"
+  },
+  {
+    "sha": "beed8e4d2987e2025fb6021edbb4ca6e78ef223e",
+    "filename": "tools/autograd/templates/python_variable_methods.cpp",
+    "status": "modified",
+    "additions": 1,
+    "deletions": 1,
+    "changes": 2,
+    "blob_url": "https://github.com/pytorch/pytorch/blob/12d290b177c1bf8427ae721542c97605284f1bcd/tools%2Fautograd%2Ftemplates%2Fpython_variable_methods.cpp",
+    "raw_url": "https://github.com/pytorch/pytorch/raw/12d290b177c1bf8427ae721542c97605284f1bcd/tools%2Fautograd%2Ftemplates%2Fpython_variable_methods.cpp",
+    "contents_url": "https://api.github.com/repos/pytorch/pytorch/contents/tools%2Fautograd%2Ftemplates%2Fpython_variable_methods.cpp?ref=12d290b177c1bf8427ae721542c97605284f1bcd",
+    "patch": "@@ -182,7 +182,7 @@ static PyObject * THPVariable_data_ptr(PyObject* self_, PyObject* args)\n static PyObject * THPVariable_const_data_ptr(PyObject* self_, PyObject* args)\n {\n   HANDLE_TH_ERRORS\n-  if (check_has_torch_function(self_)) {\n+  if (has_torch_function(self_)) {\n     return handle_torch_function(self_, \"const_data_ptr\", args);\n   }\n   auto& self = THPVariable_Unpack(self_);"
+  }
+]

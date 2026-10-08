@@ -1,0 +1,23 @@
+{
+  "author_login": "can-gaa-hou",
+  "body": "Stack from [ghstack](https://github.com/ezyang/ghstack/tree/0.14.0) (oldest at bottom):\n* __->__ #189537\n\n\n\ncc @gujinghui @PenghuiCheng @XiaobingSuper @jianyuh @jgong5 @mingfeima @sanchitintel @ashokei @jingxu10 @min-jean-cho @yanbing-j @Guobing-Chen @Xia-Weiwen @snadampal",
+  "facts": {
+    "actionable_labelers": [],
+    "author_has_triage_permission": true,
+    "has_actionable_linked_issue": false,
+    "has_maintainer_activity": true,
+    "has_related_actionable_issue": false,
+    "has_supporter": false,
+    "is_already_handled": false,
+    "is_open_non_draft_pr_against_main": true,
+    "maintainer_requested_reviewers": [],
+    "supporters": []
+  },
+  "identity": {
+    "head_sha": "bcf449805f72f81946a73f2056d7062407b65c3f",
+    "number": 189537,
+    "repository": "pytorch/pytorch",
+    "workflow_sha": "56c0db589b3b5963102e58867f06ed80b434bf1c"
+  },
+  "title": "[Test] Refactor test/test_nn.py to be device-agnostic [8/N]"
+}

@@ -1,7 +1,7 @@
 {
-  "pytorch_sha": "0be369793557163ef6da98a0bb5a7337d5ccf664",
-  "pr": 200317,
-  "pr_title": "[auto-pr-triage] Narrow testcase_refactoring ownership and rename it accelerator_test_refactoring",
+  "pytorch_sha": "d742daf5904c3da2d3c3383fbea90b7609ae55e5",
+  "pr": 200329,
+  "pr_title": "[auto-pr-triage] Assign matching owner categories even when codepath owners cover the files",
   "model": "claude-sonnet-5",
   "effort": "low",
   "reps": 5,
@@ -30,5 +30,5 @@
     200008,
     200075
   ],
-  "published_at": "2026-10-08 20:31 UTC"
+  "published_at": "2026-10-08 21:20 UTC"
 }

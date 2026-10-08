@@ -1,0 +1,26 @@
+{
+  "pr": 199982,
+  "title": "[Caffe2] Check CUDA allocator test runtime errors",
+  "expected": {
+    "autograd": "assign"
+  },
+  "tests": "",
+  "source": "reviewed",
+  "labeled_by": "soulitzer",
+  "labeled_at": "2026-10-07",
+  "reason": "",
+  "snapshot": {
+    "head_sha": "3a5bcabb103a202a85b7b2627956d1f2f4164e21",
+    "pytorch_sha": "13e6ce9871133c72dd43a40d3f6e2af73f419434",
+    "taken_at": "2026-10-08T20:04:50Z"
+  },
+  "bot_runs": [],
+  "reviewer_changes": [],
+  "reviews": [
+    {
+      "at": "2026-10-07T18:30:37Z",
+      "reviewer": "soulitzer",
+      "state": "APPROVED"
+    }
+  ]
+}

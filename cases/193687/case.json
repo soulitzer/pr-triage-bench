@@ -1,0 +1,21 @@
+{
+  "pr": 193687,
+  "title": "Add hw_classification to test/nn/test_embedding.py",
+  "expected": {
+    "nn": "assign",
+    "accelerator_test_refactoring": "assign"
+  },
+  "tests": "Both categories on an nn test refactor: clause (1) HardwareClassification labels on test/nn/test_embedding.py, which nn also owns because it refactors nn tests.",
+  "source": "hand-picked",
+  "labeled_by": "soulitzer",
+  "labeled_at": "2026-10-08",
+  "reason": "Adds hw_classification to test/nn/test_embedding.py; only that file changes. nn and accelerator_test_refactoring both own refactors of nn tests (soulitzer, 2026-10-08).",
+  "snapshot": {
+    "head_sha": "f04ca8e16c7bf69283010ae6ac623a6f9c7b421c",
+    "pytorch_sha": "56c0db589b3b5963102e58867f06ed80b434bf1c",
+    "taken_at": "2026-10-08T21:07:39Z"
+  },
+  "bot_runs": [],
+  "reviewer_changes": [],
+  "reviews": []
+}

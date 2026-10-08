@@ -1,6 +1,19 @@
 {
   "pr": 200075,
-  "head_sha": "661b5d7bb05b4f5af47e6c41c93fd5ddcce72925",
+  "title": "[Test][CUDA] Fix 3d reduction tests",
+  "expected": {
+    "accelerator_test_refactoring": "not_assign"
+  },
+  "tests": "Exclusion: a standalone fix to tests on one device (CUDA) that does not change how they are classified, gated, or instantiated.",
+  "source": "bot-mislabeled",
+  "labeled_by": "soulitzer",
+  "labeled_at": "2026-10-08",
+  "reason": "CUDA-specific test fix in inductor tests, not test refactoring. Reviewer fffrog replaced with eellison.",
+  "snapshot": {
+    "head_sha": "661b5d7bb05b4f5af47e6c41c93fd5ddcce72925",
+    "pytorch_sha": "e916b30b6d1d49e6df8d067ef013704fe0e32940",
+    "taken_at": "2026-10-08T19:48:19Z"
+  },
   "bot_runs": [
     {
       "run_id": 37657809302,
@@ -17,9 +30,6 @@
       "additional_owners": []
     }
   ],
-  "wrong_owners": [
-    "testcase_refactoring"
-  ],
   "reviewer_changes": [
     {
       "at": "2026-10-07T19:26:39Z",
@@ -34,7 +44,5 @@
       "actor": "soulitzer"
     }
   ],
-  "labeled_by": "soulitzer",
-  "labeled_at": "2026-10-08",
-  "reason": "CUDA-specific test fix in inductor tests, not test refactoring. Reviewer fffrog replaced with eellison."
+  "reviews": []
 }

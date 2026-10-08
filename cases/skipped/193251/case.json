@@ -1,0 +1,26 @@
+{
+  "pr": 193251,
+  "title": "[Testcase Refactoring] Add hw_classification in test/fx/test_fx_param_shape_control_flow.py",
+  "expected": {
+    "accelerator_test_refactoring": "assign"
+  },
+  "tests": "",
+  "source": "reviewed",
+  "labeled_by": "fffrog",
+  "labeled_at": "2026-08-28",
+  "reason": "",
+  "snapshot": {
+    "head_sha": "4ebb1d49b33d440e45e306b1b5b878dde6a7cdf8",
+    "pytorch_sha": "e916b30b6d1d49e6df8d067ef013704fe0e32940",
+    "taken_at": "2026-10-08T19:49:18Z"
+  },
+  "bot_runs": [],
+  "reviewer_changes": [],
+  "reviews": [
+    {
+      "at": "2026-08-28T09:59:46Z",
+      "reviewer": "fffrog",
+      "state": "APPROVED"
+    }
+  ]
+}

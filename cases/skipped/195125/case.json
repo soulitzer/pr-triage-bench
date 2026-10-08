@@ -1,0 +1,26 @@
+{
+  "pr": 195125,
+  "title": "[Testcase Refactoring] Add proper hw_classification to test_ops",
+  "expected": {
+    "accelerator_test_refactoring": "assign"
+  },
+  "tests": "",
+  "source": "reviewed",
+  "labeled_by": "fffrog",
+  "labeled_at": "2026-09-11",
+  "reason": "",
+  "snapshot": {
+    "head_sha": "cb1f44cf409122e64bb54b868c98912ea5037859",
+    "pytorch_sha": "e916b30b6d1d49e6df8d067ef013704fe0e32940",
+    "taken_at": "2026-10-08T19:49:28Z"
+  },
+  "bot_runs": [],
+  "reviewer_changes": [],
+  "reviews": [
+    {
+      "at": "2026-09-11T08:41:40Z",
+      "reviewer": "fffrog",
+      "state": "CHANGES_REQUESTED"
+    }
+  ]
+}

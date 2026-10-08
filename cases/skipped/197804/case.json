@@ -1,0 +1,26 @@
+{
+  "pr": 197804,
+  "title": "[Testcase Refactoring] Add HardwareClassification GENERIC to test_adaround_eager.py",
+  "expected": {
+    "accelerator_test_refactoring": "assign"
+  },
+  "tests": "",
+  "source": "reviewed",
+  "labeled_by": "fffrog",
+  "labeled_at": "2026-09-29",
+  "reason": "",
+  "snapshot": {
+    "head_sha": "f90ecd03fdc96c897fc98ebde3dcc2a67e21090e",
+    "pytorch_sha": "e916b30b6d1d49e6df8d067ef013704fe0e32940",
+    "taken_at": "2026-10-08T19:48:49Z"
+  },
+  "bot_runs": [],
+  "reviewer_changes": [],
+  "reviews": [
+    {
+      "at": "2026-09-29T02:50:12Z",
+      "reviewer": "fffrog",
+      "state": "APPROVED"
+    }
+  ]
+}

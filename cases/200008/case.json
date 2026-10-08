@@ -1,6 +1,19 @@
 {
   "pr": 200008,
-  "head_sha": "d54148845f0343d38119c99d11a73eb10a0c9a05",
+  "title": "Stop registering X86/FBGEMM quantized engines on AArch64",
+  "expected": {
+    "accelerator_test_refactoring": "not_assign"
+  },
+  "tests": "Exclusions: changes non-test code (quantized CPU kernels), and adds a backend availability check (FBGEMM) outside the Capability registry.",
+  "source": "bot-mislabeled",
+  "labeled_by": "soulitzer",
+  "labeled_at": "2026-10-08",
+  "reason": "Quantized CPU engine change (X86/FBGEMM engines no longer registered on AArch64) that the quantization codepath owners cover. testcase_refactoring matched only a supporting FBGEMM skip helper in torch/testing/_internal/common_quantization.py. Reviewer fffrog replaced with vkuzo and andrewor14.",
+  "snapshot": {
+    "head_sha": "d54148845f0343d38119c99d11a73eb10a0c9a05",
+    "pytorch_sha": "e916b30b6d1d49e6df8d067ef013704fe0e32940",
+    "taken_at": "2026-10-08T19:48:08Z"
+  },
   "bot_runs": [
     {
       "run_id": 37571874353,
@@ -18,9 +31,6 @@
         "testcase_refactoring"
       ]
     }
-  ],
-  "wrong_owners": [
-    "testcase_refactoring"
   ],
   "reviewer_changes": [
     {
@@ -48,7 +58,5 @@
       "actor": "soulitzer"
     }
   ],
-  "labeled_by": "soulitzer",
-  "labeled_at": "2026-10-08",
-  "reason": "Quantized CPU engine change (X86/FBGEMM engines no longer registered on AArch64) that the quantization codepath owners cover. testcase_refactoring matched only a supporting FBGEMM skip helper in torch/testing/_internal/common_quantization.py. Reviewer fffrog replaced with vkuzo and andrewor14."
+  "reviews": []
 }

@@ -1,0 +1,31 @@
+{
+  "pr": 194027,
+  "title": "[Testcase Refactoring] Add hw_classification label and multi-accelerator support to test_torchinductor_opinfo.py",
+  "expected": {
+    "accelerator_test_refactoring": "assign"
+  },
+  "tests": "",
+  "source": "reviewed",
+  "labeled_by": "fffrog",
+  "labeled_at": "2026-09-15",
+  "reason": "",
+  "snapshot": {
+    "head_sha": "2b6b1052ac479ed692ebf54ff8d14da5a8b7ac21",
+    "pytorch_sha": "e916b30b6d1d49e6df8d067ef013704fe0e32940",
+    "taken_at": "2026-10-08T19:48:29Z"
+  },
+  "bot_runs": [],
+  "reviewer_changes": [],
+  "reviews": [
+    {
+      "at": "2026-09-15T11:53:06Z",
+      "reviewer": "fffrog",
+      "state": "CHANGES_REQUESTED"
+    },
+    {
+      "at": "2026-09-24T07:37:02Z",
+      "reviewer": "fffrog",
+      "state": "CHANGES_REQUESTED"
+    }
+  ]
+}

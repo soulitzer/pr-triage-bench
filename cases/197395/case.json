@@ -1,0 +1,26 @@
+{
+  "pr": 197395,
+  "title": "[Testcase Refactoring] Add HardwareClassification GENERIC to test_custom_ops.py",
+  "expected": {
+    "accelerator_test_refactoring": "assign"
+  },
+  "tests": "Clause (1): adds a HardwareClassification label (GENERIC) to a test file.",
+  "source": "reviewed",
+  "labeled_by": "fffrog",
+  "labeled_at": "2026-09-29",
+  "reason": "Adds hw_classification = HardwareClassification.GENERIC to test_custom_ops.py; approved by fffrog.",
+  "snapshot": {
+    "head_sha": "bd4a38366463c3db820a5d2d5cda45a289e92ead",
+    "pytorch_sha": "e916b30b6d1d49e6df8d067ef013704fe0e32940",
+    "taken_at": "2026-10-08T19:49:25Z"
+  },
+  "bot_runs": [],
+  "reviewer_changes": [],
+  "reviews": [
+    {
+      "at": "2026-09-29T02:42:56Z",
+      "reviewer": "fffrog",
+      "state": "APPROVED"
+    }
+  ]
+}

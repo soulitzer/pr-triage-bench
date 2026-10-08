@@ -1,0 +1,25 @@
+{
+  "author_login": "syg1996419",
+  "body": "## Summary\r\n\r\nAdd `HardwareClassification` label to `test/quantization/ao_migration/test_quantization.py`.\r\n\r\n## Changes\r\n\r\n- Add `hw_classification = HardwareClassification.GENERIC` to `TestAOMigrationQuantization`\r\n- Add `HardwareClassification` to `common_utils` import\r\n\r\n## Rationale\r\n\r\nThis test file verifies module/function import paths for the `torch/quantization` \u2192 `torch/ao/quantization` migration. All 11 test methods use `importlib` to check import equivalence \u2014 pure Python logic, no device dependency. Classified as `GENERIC` per `HardwareClassification` spec (device-agnostic, no `instantiate_device_type_tests`).\r\n\r\n## Test\r\n\r\nVerified: `python -m pytest test/quantization/ao_migration/test_quantization.py -v` \u2014 all tests pass.",
+  "facts": {
+    "actionable_labelers": [],
+    "author_has_triage_permission": false,
+    "has_actionable_linked_issue": false,
+    "has_maintainer_activity": true,
+    "has_related_actionable_issue": false,
+    "has_supporter": false,
+    "is_already_handled": false,
+    "is_open_non_draft_pr_against_main": true,
+    "maintainer_requested_reviewers": [
+      "fffrog"
+    ],
+    "supporters": []
+  },
+  "identity": {
+    "head_sha": "804c3d546b7799ae989217e20c6c713e0e004356",
+    "number": 197778,
+    "repository": "pytorch/pytorch",
+    "workflow_sha": "e916b30b6d1d49e6df8d067ef013704fe0e32940"
+  },
+  "title": "[Testcase Refactoring] Fix docstring order in test_quantization.py"
+}

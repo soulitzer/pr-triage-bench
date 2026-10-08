@@ -1,0 +1,26 @@
+{
+  "pr": 193329,
+  "title": "[Testcase Refactoring] Add hw_classification label to test_int_tuple.py",
+  "expected": {
+    "accelerator_test_refactoring": "assign"
+  },
+  "tests": "",
+  "source": "reviewed",
+  "labeled_by": "fffrog",
+  "labeled_at": "2026-08-28",
+  "reason": "",
+  "snapshot": {
+    "head_sha": "3e5da50168715b7fca23bff0aa0b803d14b38234",
+    "pytorch_sha": "e916b30b6d1d49e6df8d067ef013704fe0e32940",
+    "taken_at": "2026-10-08T19:49:12Z"
+  },
+  "bot_runs": [],
+  "reviewer_changes": [],
+  "reviews": [
+    {
+      "at": "2026-08-28T10:01:05Z",
+      "reviewer": "fffrog",
+      "state": "APPROVED"
+    }
+  ]
+}

@@ -6,7 +6,7 @@ import shutil
 from pathlib import Path
 
 from bench.github import REPOSITORY, gh_api
-from bench.labels import REPO_ROOT
+from bench.cases import REPO_ROOT
 
 
 PIPELINE_DIR = "scripts/auto_pr_triage"
@@ -17,7 +17,7 @@ CONFIG_PATHS = (
     f"{CONFIG_DIR}/team_members.json",
 )
 CACHE_DIR = REPO_ROOT / "cache" / "pipeline"
-# Labeled PRs were already handled by the bot, so intake would skip them.
+# Snapshots are taken of PRs the bot already handled, which intake would skip.
 HANDLED_CHECK = "    return bool(names & HANDLED_LABELS)\n"
 HANDLED_CHECK_DISABLED = "    return False  # pr-triage-bench: evaluate handled PRs\n"
 

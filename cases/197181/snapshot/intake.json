@@ -1,0 +1,23 @@
+{
+  "author_login": "madhumitha0102",
+  "body": "For https://github.com/pytorch/pytorch/issues/114850, we will port distributed tests to Intel GPU.\r\nWe will enable Intel GPU with following methods and keep the original code styles:\r\n\r\nExample: \"torch.accelerator.current_accelerator()\" to determine the accelerator backend\r\n\r\nenabled XPU for the following files:\r\n\r\n1. test/distributed/tensor/debug/test_debug_mode.py\r\n2. test/distributed/tensor/parallel/test_micro_pipeline_tp.py\r\n3. test/distributed/test_c10d_torchcomms.py\r\n4. test/distributed/test_decomp_comms.py\r\n5. test/distributed/test_functional_differentials.py\r\n\r\ncc @newtdms, @guangyey, @etaf, @CuiYifeng, @liangan1, @astachowiczhabana, @pbielak.",
+  "facts": {
+    "actionable_labelers": [],
+    "author_has_triage_permission": false,
+    "has_actionable_linked_issue": false,
+    "has_maintainer_activity": true,
+    "has_related_actionable_issue": false,
+    "has_supporter": false,
+    "is_already_handled": false,
+    "is_open_non_draft_pr_against_main": true,
+    "maintainer_requested_reviewers": [],
+    "supporters": []
+  },
+  "identity": {
+    "head_sha": "1ea52973c0ac1a8a4ea009ff7e222a596e7c8bce",
+    "number": 197181,
+    "repository": "pytorch/pytorch",
+    "workflow_sha": "e916b30b6d1d49e6df8d067ef013704fe0e32940"
+  },
+  "title": "[xpu][test] Port 5 distributed tests cases on Intel GPUs"
+}

@@ -1,0 +1,23 @@
+{
+  "author_login": "orangeH25",
+  "body": "## Summary\r\n\r\nPart of a series of PRs refactoring `test_torch.py` for out-of-tree backends.\r\n\r\nThis one splits the remaining mixed CPU/CUDA tests into their corresponding test classes and loosens the CUDA-only gates on tests that do not actually need CUDA.\r\n\r\n## Changes\r\n\r\nSplit the remaining mixed CPU/CUDA tests into the appropriate test classes:\r\n\r\n- `test_copy_transpose_tiled_small`\r\n- `test_split_with_sizes_copy_out`\r\n- `test_bmm_matmul_mixed_dtype_error`\r\n- `test_no_cuda_monkeypatch`\r\n- `test_bf16_supported_on_cpu`\r\n\r\nMade several CUDA-only tests device-generic:\r\n\r\n- `test_copy_transpose_tiled*`\r\n- `test_cdist_backward_large_index`\r\n- `test_ternary_op_mem_overlap`\r\n- `test_where_scalar_handcrafted_values`\r\n\r\n## Test Plan\r\n\r\nVerified on CUDA \r\n\r\n```bash\r\npytest test/test_torch.py -vvv -k \"test_copy_transpose_tiled or test_cdist_backward_large_index or test_ternary_op_mem_overlap or test_where_scalar_handcrafted_values or test_split_with_sizes_copy_out or test_bmm_matmul_mixed_dtype_error or test_bf16_supported_on_cpu or test_no_cuda_monkeypatch\"\r\n\r\n# 100 passed, 99 skipped, 1939 deselected in 17.46s\r\n\r\nPYTORCH_TEST_WITH_INDUCTOR=1 pytest test/test_torch.py -vvv -k \"test_copy_transpose_tiled or test_cdist_backward_large_index or test_ternary_op_mem_overlap or test_where_scalar_handcrafted_values or test_split_with_sizes_copy_out or test_bmm_matmul_mixed_dtype_error or test_bf16_supported_on_cpu or test_no_cuda_monkeypatch\"\r\n\r\n# 98 passed, 101 skipped, 1939 deselected in 202.01s (0:03:22)\r\n```\r\n\r\n\r\n\r\n",
+  "facts": {
+    "actionable_labelers": [],
+    "author_has_triage_permission": false,
+    "has_actionable_linked_issue": false,
+    "has_maintainer_activity": false,
+    "has_related_actionable_issue": false,
+    "has_supporter": false,
+    "is_already_handled": false,
+    "is_open_non_draft_pr_against_main": true,
+    "maintainer_requested_reviewers": [],
+    "supporters": []
+  },
+  "identity": {
+    "head_sha": "a86d60aa7e6a7dac13e6c447e38e0936f2651605",
+    "number": 198995,
+    "repository": "pytorch/pytorch",
+    "workflow_sha": "e916b30b6d1d49e6df8d067ef013704fe0e32940"
+  },
+  "title": "[Test] Improve test reuse in test_torch.py for out-of-tree backends [8/N]"
+}

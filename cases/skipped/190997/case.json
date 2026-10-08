@@ -1,0 +1,26 @@
+{
+  "pr": 190997,
+  "title": "[RFC] [Testcase Refactoring]Make distributed replicate compiler tests device-agnostic using torch.accelerator",
+  "expected": {
+    "accelerator_test_refactoring": "assign"
+  },
+  "tests": "",
+  "source": "reviewed",
+  "labeled_by": "fffrog",
+  "labeled_at": "2026-08-27",
+  "reason": "",
+  "snapshot": {
+    "head_sha": "82c6755a3c1e5b6f67bdb4fcefdfb6c6378c04c5",
+    "pytorch_sha": "e916b30b6d1d49e6df8d067ef013704fe0e32940",
+    "taken_at": "2026-10-08T19:48:43Z"
+  },
+  "bot_runs": [],
+  "reviewer_changes": [],
+  "reviews": [
+    {
+      "at": "2026-08-27T11:31:07Z",
+      "reviewer": "fffrog",
+      "state": "CHANGES_REQUESTED"
+    }
+  ]
+}

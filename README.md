@@ -1,40 +1,60 @@
 # pr-triage-bench
 
-Benchmark for PyTorch's [Auto PR Triage](https://github.com/pytorch/pytorch/blob/main/.github/workflows/auto-pr-triage.yml)
-workflow. It reruns the workflow's ownership pipeline on PRs a person has
-judged, and reports how often known mistakes come back for each owner category.
+Regression suite for PyTorch's [Auto PR Triage](https://github.com/pytorch/pytorch/blob/main/.github/workflows/auto-pr-triage.yml)
+owner routing. Dashboard: https://soulitzer.github.io/pr-triage-bench/
 
-## What it measures (v0)
+Each case is a PR whose inputs were snapshotted, with the owner categories a
+person says the bot should or should not assign. A run replays every snapshot
+through the production pipeline with a given config, several times per case.
+Cases are chosen to cover each part of a category's description (what it owns
+and what it excludes), so the suite is not a random sample.
 
-For now every case is a PR where the bot assigned an owner category that a
-person judged wrong. For each category, the score is the **repeat-mistake
-rate**: of the runs on known-mislabeled PRs, how often the config assigns the
-same wrong category again. Lower is better.
+## Cases
 
-This is not precision yet. Precision needs PRs where the bot's assignment was
-confirmed right as well as wrong, and v0 only has the wrong ones. Confirmed
-correct cases will be added later; until then, use this as a regression check:
-a config change should not bring back a mistake a person already flagged.
+`cases/<pr>/case.json` records:
 
-Runs whose worker output fails validation are reported as failed runs, not as
-repeats or non-repeats.
+- `expected`: owner category -> `assign` or `not_assign`
+- `tests`: what this case tests, for example which clause of the description
+- `source`: `bot-mislabeled`, `reviewed` (someone on the category's roster
+  reviewed the PR), or `hand-picked`
+- `labeled_by`, `labeled_at`, `reason`
+- `snapshot`: the PR head it was taken from, and the pytorch commit whose
+  pipeline took it
+- context: the bot's runs on the PR with the categories each assigned, people's
+  reviewer changes after the bot first acted, and roster reviews
 
-## Labeling process
+`cases/<pr>/snapshot/` holds only the PR side of the worker's input: the
+pipeline's intake result and the PR's changed files with patches. Runs never
+read the live PR, so later pushes, reviewer changes, or labels do not change a
+case. Intake facts are recorded as an open, unhandled PR so closed or triaged
+PRs can be cases; the worker does not see these facts.
 
-1. **Flag on GitHub.** When the bot routes a PR to the wrong owner category,
-   add the `bot-mislabeled` label to the PR and fix the reviewers.
-2. **Harvest.** `python -m bench.harvest` drafts `labels/pending/<pr>.json`
-   for each new `bot-mislabeled` PR. The draft lists every bot run before the
-   label with the categories each assigned (read from the run's log), and
-   every reviewer change people made after the bot first acted.
-   `wrong_owners` starts as every category the bot assigned.
-3. **Confirm.** Trim `wrong_owners` to the categories that were actually
-   wrong, write a one-line `reason`, and move the file to `labels/`. Only
-   files in `labels/` count, and they must have a reason and at least one
-   wrong owner.
+The config side (`worker.md`, `CODEOWNERS`, and `.github/auto-pr-triage/*.json`)
+is not part of a case. Each run takes it from the pytorch commit it is given,
+plus any override, and the dashboard links every file a run used to that
+commit.
 
-Owner categories that get renamed are mapped in `labels/owner_aliases.json`,
-so old labels keep scoring against the new name.
+Owner categories that get renamed are mapped in `cases/owner_aliases.json`.
+
+## Adding cases
+
+1. **Flag on GitHub.** When the bot routes a PR to the wrong category, add the
+   `bot-mislabeled` label and fix the reviewers.
+2. **Draft.** `python -m bench.harvest [options]` snapshots each PR with the
+   pipeline on pytorch `main` and drafts `cases/pending/<pr>/`:
+   - every new `bot-mislabeled` PR, with the categories the bot assigned as
+     `not_assign` (skip with `--skip-mislabeled`);
+   - with `--reviewed-owner <category>`, the most recently updated PRs a
+     reviewer on that category's roster reviewed (up to `--reviewed-limit`,
+     default 10, per reviewer), as `assign`. The bot need not have routed them,
+     and reviewers also review work outside their category, so check each one;
+   - with `--add <pr> --expect <category>=<assign|not_assign>`, a hand-picked PR.
+3. **Confirm.** Fill in `tests` and `reason`, fix `expected`, and move the
+   directory to `cases/`. Move drafts you don't want to `cases/skipped/` so
+   harvest does not draft them again. Only directories in `cases/` count.
+
+Prefer cases that cover a clause no other case covers, or that sit near a
+boundary of the description, over more of the same kind.
 
 ## Running
 
@@ -51,15 +71,32 @@ python -m bench.score runs/main
 ```
 
 `bench.run` fetches `scripts/auto_pr_triage`, `CODEOWNERS`, and
-`.github/auto-pr-triage/*.json` at the given commit, then runs the same stages
-as `.github/actions/auto-pr-triage/action.yml`: intake, ownership input, the
-tool-less worker (same flags, `claude-sonnet-5` at effort `low`), validation,
-and planning. It never writes to GitHub. One local change: intake is patched to
-evaluate PRs that already carry triage outcome labels, since every labeled PR
-does.
+`.github/auto-pr-triage/*.json` at the given commit. For each case it builds the
+worker input from the snapshot with the pipeline's `build_ownership_input.py`,
+then runs the tool-less worker (same flags as
+`.github/actions/auto-pr-triage/action.yml`, `claude-sonnet-5` at effort
+`low`) and validation. It never writes to GitHub. Planning (triage vs. routed
+untriaged) is not run, since it depends on live reviewer state.
 
-Run directories under `runs/` contain PR content and are git-ignored.
-`runs/<name>/results.jsonl` keeps only owner IDs, counts, and decisions.
+Commit config overrides before a run you will publish: the run records this
+repo's commit so the dashboard can link the override files, and flags runs made
+with uncommitted changes.
+
+If the pipeline changes the format of the intake result or file list, old
+snapshots may need to be retaken.
+
+## Scores
+
+Per case and expected category, a run passes when it assigns a category the
+case expects assigned, or leaves out one expected absent. Per category:
+
+- **precision on this suite**: correct assignments over all assignments. It
+  depends on how many cases of each kind the suite has, so use it to compare
+  configs, not as a production rate;
+- **recall**: share of runs that assign the category on `assign` cases;
+- **false positive rate**: share of runs that assign it on `not_assign` cases.
+
+Runs whose worker output fails validation are counted separately.
 
 ## Dashboard
 
@@ -67,13 +104,7 @@ Run directories under `runs/` contain PR content and are git-ignored.
 python -m bench.publish runs/main runs/proposal
 ```
 
-copies each run's sanitized `results.jsonl` and `meta.json` into `results/<name>/`
-(committed) and rebuilds `docs/index.html` from every published run and the
-current labels. GitHub Pages serves `docs/` from `main`. Running
-`python -m bench.publish` with no arguments only rebuilds the page, for
-example after adding labels.
-
-## Caveats
-
-The worker sees the PR as it is now. If a PR's head moved since it was
-labeled, `bench.run` prints a warning; the label may no longer apply.
+copies each run's sanitized `results.jsonl` and `meta.json` into
+`results/<name>/` (committed) and rebuilds `docs/index.html`, which GitHub
+Pages serves from `main`. Each category shows its scores per run and expands
+into its samples. Run with no arguments to rebuild after changing cases.

@@ -1,8 +1,11 @@
-"""Score a run: per owner category, how often known-wrong assignments come back.
+"""Score a run against the regression cases, per owner category.
 
-A run "repeats" a mistake when it assigns an owner category that a confirmed
-label marks wrong for that PR. Runs whose worker output failed validation are
-counted separately, not as repeats or non-repeats.
+For each case and expected owner, a run passes when it assigns an owner the
+case expects assigned, or leaves out one it expects not assigned. Per
+category: recall on cases expecting it, false positive rate on cases expecting
+it absent, and precision on this suite (correct assignments over all
+assignments). Precision depends on how many cases of each kind the suite has.
+Runs whose worker output failed validation are counted separately.
 """
 
 from __future__ import annotations
@@ -13,99 +16,119 @@ from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
 
-from bench.labels import canonical_owner, load_confirmed_labels, load_owner_aliases
+from bench.cases import Case, canonical_owner, load_cases, load_owner_aliases
 
 
 @dataclass(frozen=True)
-class MistakeScore:
-    """Repeat counts for one wrong owner category, on one PR or summed over PRs."""
+class CaseResult:
+    """How the runs on one case treated one expected owner."""
 
+    pr: int
     owner: str
-    labeled_prs: int
+    expectation: str
     judged_runs: int
-    repeats: int
-    repeats_with_discarded: int
+    assigned: int
+    assigned_with_discarded: int
     failed_runs: int
+    rep_owners: tuple[tuple[str, ...] | None, ...]
 
     @property
-    def repeat_rate(self) -> float | None:
-        return self.repeats / self.judged_runs if self.judged_runs else None
+    def passed(self) -> int:
+        return self.assigned if self.expectation == "assign" else self.judged_runs - self.assigned
 
 
 @dataclass(frozen=True)
-class RunScore:
-    by_pr: dict[int, tuple[MistakeScore, ...]]
+class CategorySummary:
+    owner: str
+    results: tuple[CaseResult, ...]
+
+    def _sum(self, *, expectation: str, field: str) -> int:
+        return sum(getattr(r, field) for r in self.results if r.expectation == expectation)
 
     @property
-    def by_owner(self) -> dict[str, MistakeScore]:
-        scores = defaultdict(list)
-        for pr_scores in self.by_pr.values():
-            for score in pr_scores:
-                scores[score.owner].append(score)
-        return {
-            owner: MistakeScore(
-                owner=owner,
-                labeled_prs=len(owner_scores),
-                judged_runs=sum(s.judged_runs for s in owner_scores),
-                repeats=sum(s.repeats for s in owner_scores),
-                repeats_with_discarded=sum(s.repeats_with_discarded for s in owner_scores),
-                failed_runs=sum(s.failed_runs for s in owner_scores),
-            )
-            for owner, owner_scores in sorted(scores.items())
-        }
+    def recall(self) -> tuple[int, int]:
+        return self._sum(expectation="assign", field="assigned"), self._sum(
+            expectation="assign", field="judged_runs"
+        )
+
+    @property
+    def false_positive_rate(self) -> tuple[int, int]:
+        return self._sum(expectation="not_assign", field="assigned"), self._sum(
+            expectation="not_assign", field="judged_runs"
+        )
+
+    @property
+    def precision(self) -> tuple[int, int]:
+        correct = self.recall[0]
+        return correct, correct + self.false_positive_rate[0]
+
+    @property
+    def failed_runs(self) -> int:
+        return sum(r.failed_runs for r in self.results)
 
 
-def score_run(run_dir: Path, /) -> RunScore:
+def score_run(run_dir: Path, /, *, cases: list[Case]) -> dict[str, CategorySummary]:
     aliases = load_owner_aliases()
     runs_by_pr = defaultdict(list)
     for line in (run_dir / "results.jsonl").read_text().splitlines():
         result = json.loads(line)
         runs_by_pr[result["pr"]].append(result)
-    by_pr = {}
-    for label in load_confirmed_labels():
-        succeeded = [r for r in runs_by_pr.get(label.pr, []) if r["llm_run_status"] == "succeeded"]
+    results_by_owner = defaultdict(list)
+    for case in cases:
+        runs = sorted(runs_by_pr.get(case.pr, []), key=lambda r: r["rep"])
+        if not runs:
+            continue
+        succeeded = [r for r in runs if r["llm_run_status"] == "succeeded"]
         accepted = [{canonical_owner(o, aliases=aliases) for o in r["additional_owners"]} for r in succeeded]
         proposed = [
             owners | {canonical_owner(o, aliases=aliases) for o in r["discarded_owners"]}
             for owners, r in zip(accepted, succeeded)
         ]
-        wrong_owners = sorted({canonical_owner(o, aliases=aliases) for o in label.wrong_owners})
-        by_pr[label.pr] = tuple(
-            MistakeScore(
-                owner=owner,
-                labeled_prs=1,
-                judged_runs=len(succeeded),
-                repeats=sum(owner in owners for owners in accepted),
-                repeats_with_discarded=sum(owner in owners for owners in proposed),
-                failed_runs=len(runs_by_pr.get(label.pr, [])) - len(succeeded),
+        for owner_id, expectation in sorted(case.expected.items()):
+            owner = canonical_owner(owner_id, aliases=aliases)
+            results_by_owner[owner].append(
+                CaseResult(
+                    pr=case.pr,
+                    owner=owner,
+                    expectation=expectation,
+                    judged_runs=len(succeeded),
+                    assigned=sum(owner in owners for owners in accepted),
+                    assigned_with_discarded=sum(owner in owners for owners in proposed),
+                    failed_runs=len(runs) - len(succeeded),
+                    rep_owners=tuple(
+                        tuple(r["additional_owners"]) if r["llm_run_status"] == "succeeded" else None
+                        for r in runs
+                    ),
+                )
             )
-            for owner in wrong_owners
-        )
-    return RunScore(by_pr=by_pr)
+    return {
+        owner: CategorySummary(owner=owner, results=tuple(results))
+        for owner, results in sorted(results_by_owner.items())
+    }
 
 
-def format_rate(score: MistakeScore, /) -> str:
-    rate = "n/a" if score.repeat_rate is None else f"{score.repeat_rate:.0%}"
-    return f"{rate} ({score.repeats}/{score.judged_runs})"
+def format_ratio(ratio: tuple[int, int], /) -> str:
+    numerator, denominator = ratio
+    rate = f"{numerator / denominator:.0%}" if denominator else "n/a"
+    return f"{rate} ({numerator}/{denominator})"
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("run_dir", type=Path)
     run_dir = parser.parse_args().run_dir
-    run_score = score_run(run_dir)
     meta = json.loads((run_dir / "meta.json").read_text())
     print({key: meta[key] for key in ("pytorch_sha", "config", "model", "effort", "reps")})
-    print("\ncategory\tlabeled PRs\trepeat rate\tincl. discarded\tfailed runs")
-    for score in run_score.by_owner.values():
+    summaries = score_run(run_dir, cases=load_cases())
+    for summary in summaries.values():
         print(
-            f"{score.owner}\t{score.labeled_prs}\t{format_rate(score)}"
-            f"\t{score.repeats_with_discarded}/{score.judged_runs}\t{score.failed_runs}"
+            f"\n{summary.owner}: precision on suite {format_ratio(summary.precision)}, "
+            f"recall {format_ratio(summary.recall)}, "
+            f"false positive rate {format_ratio(summary.false_positive_rate)}, "
+            f"failed runs {summary.failed_runs}"
         )
-    print("\nper PR:")
-    for pr, scores in run_score.by_pr.items():
-        for score in scores:
-            print(f"#{pr}\t{score.owner}\t{format_rate(score)}\tfailed {score.failed_runs}")
+        for r in summary.results:
+            print(f"  #{r.pr}\texpect {r.expectation}\tpassed {r.passed}/{r.judged_runs}\tfailed {r.failed_runs}")
 
 
 if __name__ == "__main__":

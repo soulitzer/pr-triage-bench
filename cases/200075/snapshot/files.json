@@ -1,0 +1,14 @@
+[
+  {
+    "sha": "951518b23957d0bdc4c7e56cb028d8d0c598ab4c",
+    "filename": "test/inductor/test_torchinductor_strided_blocks.py",
+    "status": "modified",
+    "additions": 8,
+    "deletions": 1,
+    "changes": 9,
+    "blob_url": "https://github.com/pytorch/pytorch/blob/661b5d7bb05b4f5af47e6c41c93fd5ddcce72925/test%2Finductor%2Ftest_torchinductor_strided_blocks.py",
+    "raw_url": "https://github.com/pytorch/pytorch/raw/661b5d7bb05b4f5af47e6c41c93fd5ddcce72925/test%2Finductor%2Ftest_torchinductor_strided_blocks.py",
+    "contents_url": "https://api.github.com/repos/pytorch/pytorch/contents/test%2Finductor%2Ftest_torchinductor_strided_blocks.py?ref=661b5d7bb05b4f5af47e6c41c93fd5ddcce72925",
+    "patch": "@@ -1079,11 +1079,15 @@ def foo(*args):\n \n     def test_3d_reduction_with_pointwise_output(self):\n         view = self._discontiguous_tensor((5, 7, 3, 5), self.device)\n+        # CUDA TMA rejects the input's outer strides, which are not 16-byte aligned.\n+        expected_num_block_pointers = (\n+            1 if self.device == \"cuda\" and config.triton.use_tensor_descriptor else 2\n+        )\n \n         _result, (code,) = self._run_and_compare(\n             functools.partial(torch.sum, dim=(1, 2, 3)),\n             view,\n-            expected_num_block_pointers=2,\n+            expected_num_block_pointers=expected_num_block_pointers,\n             expected_num_triton_kernels=1,\n             config_patches={\n                 **tiled_reduction_config,\n@@ -1725,6 +1729,8 @@ def reduce_3d(x):\n                 **tiled_reduction_config,\n                 \"triton.max_tiles\": 3,\n             },\n+            rtol=1e-4,\n+            atol=1e-4,\n         )\n \n         self.assertIn(\"tl.load(in_ptr0 +\", code)\n@@ -2433,6 +2439,7 @@ class TritonHostSideTMATestCUDA(BlockDescriptorTestBase):\n     Block pointer count is skipped because host-side TMA creates\n     descriptors in the launcher, not the kernel.\"\"\"\n \n+    block_descriptor_constructor_str = \"tl.make_tensor_descriptor\"\n     device = GPU_TYPE\n \n     def _run_and_compare(self, *args, **kwargs):"
+  }
+]

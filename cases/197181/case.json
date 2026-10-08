@@ -1,0 +1,37 @@
+{
+  "pr": 197181,
+  "title": "[xpu][test] Port 5 distributed tests cases on Intel GPUs",
+  "expected": {
+    "accelerator_test_refactoring": "assign"
+  },
+  "tests": "Clause (3): enabling existing distributed tests on another accelerator (XPU), including @skipIfXpu skips added as part of the enablement.",
+  "source": "hand-picked",
+  "labeled_by": "soulitzer",
+  "labeled_at": "2026-10-08",
+  "reason": "Ports 5 distributed test files to Intel GPUs. Enabling existing tests on new backends is the stated goal of the test case refactoring effort (pytorch#185590); judged in scope when writing the v2 description.",
+  "snapshot": {
+    "head_sha": "1ea52973c0ac1a8a4ea009ff7e222a596e7c8bce",
+    "pytorch_sha": "e916b30b6d1d49e6df8d067ef013704fe0e32940",
+    "taken_at": "2026-10-08T19:47:58Z"
+  },
+  "bot_runs": [
+    {
+      "run_id": 37815484195,
+      "created_at": "2026-10-08T17:18:03Z",
+      "head_sha": "1ea52973c0ac1a8a4ea009ff7e222a596e7c8bce",
+      "additional_owners": [
+        "testcase_refactoring"
+      ]
+    },
+    {
+      "run_id": 37823292525,
+      "created_at": "2026-10-08T18:18:45Z",
+      "head_sha": "1ea52973c0ac1a8a4ea009ff7e222a596e7c8bce",
+      "additional_owners": [
+        "testcase_refactoring"
+      ]
+    }
+  ],
+  "reviewer_changes": [],
+  "reviews": []
+}

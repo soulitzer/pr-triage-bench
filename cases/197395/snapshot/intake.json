@@ -1,0 +1,25 @@
+{
+  "author_login": "syg1996419",
+  "body": "## Summary\r\n\r\nAdd `HardwareClassification` label to `test_custom_operator/test_custom_ops.py`.\r\n\r\n## Changes\r\n\r\n- Add `hw_classification = HardwareClassification.GENERIC` to `TestCustomOperators`\r\n- Add `HardwareClassification` to `common_utils` import\r\n- Remove redundant `device=\"cpu\"` from `torch.randn(3, device=\"cpu\")` (default is CPU, behavior unchanged)\r\n\r\n## Test\r\n\r\nVerified: `python test/custom_operator/test_custom_ops.py -v` \u2014 all tests pass.",
+  "facts": {
+    "actionable_labelers": [],
+    "author_has_triage_permission": false,
+    "has_actionable_linked_issue": false,
+    "has_maintainer_activity": true,
+    "has_related_actionable_issue": false,
+    "has_supporter": false,
+    "is_already_handled": false,
+    "is_open_non_draft_pr_against_main": true,
+    "maintainer_requested_reviewers": [
+      "fffrog"
+    ],
+    "supporters": []
+  },
+  "identity": {
+    "head_sha": "bd4a38366463c3db820a5d2d5cda45a289e92ead",
+    "number": 197395,
+    "repository": "pytorch/pytorch",
+    "workflow_sha": "e916b30b6d1d49e6df8d067ef013704fe0e32940"
+  },
+  "title": "[Testcase Refactoring] Add HardwareClassification GENERIC to test_custom_ops.py"
+}

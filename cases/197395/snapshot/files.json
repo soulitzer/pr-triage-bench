@@ -1,0 +1,14 @@
+[
+  {
+    "sha": "63619cf9dbed7986416bab11bd2000826fc95837",
+    "filename": "test/custom_operator/test_custom_ops.py",
+    "status": "modified",
+    "additions": 9,
+    "deletions": 2,
+    "changes": 11,
+    "blob_url": "https://github.com/pytorch/pytorch/blob/bd4a38366463c3db820a5d2d5cda45a289e92ead/test%2Fcustom_operator%2Ftest_custom_ops.py",
+    "raw_url": "https://github.com/pytorch/pytorch/raw/bd4a38366463c3db820a5d2d5cda45a289e92ead/test%2Fcustom_operator%2Ftest_custom_ops.py",
+    "contents_url": "https://api.github.com/repos/pytorch/pytorch/contents/test%2Fcustom_operator%2Ftest_custom_ops.py?ref=bd4a38366463c3db820a5d2d5cda45a289e92ead",
+    "patch": "@@ -9,13 +9,20 @@\n import torch\n import torch._library.utils as utils\n from torch import ops\n-from torch.testing._internal.common_utils import IS_WINDOWS, run_tests, TestCase\n+from torch.testing._internal.common_utils import (\n+    HardwareClassification,\n+    IS_WINDOWS,\n+    run_tests,\n+    TestCase,\n+)\n \n \n torch.ops.import_module(\"pointwise\")\n \n \n class TestCustomOperators(TestCase):\n+    hw_classification = HardwareClassification.GENERIC\n+\n     def setUp(self):\n         super().setUp()\n         self.library_path = get_custom_op_library_path()\n@@ -55,7 +62,7 @@ def f(x):\n     def test_abstract_impl_pystub_faketensor(self):\n         from functorch import make_fx\n \n-        x = torch.randn(3, device=\"cpu\")\n+        x = torch.randn(3)\n         self.assertNotIn(\"my_custom_ops\", sys.modules.keys())\n \n         with self.assertRaises("
+  }
+]

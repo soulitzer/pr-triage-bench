@@ -1,0 +1,23 @@
+{
+  "author_login": "danieldale2026",
+  "body": "> - [x] Passes lint: scoped `spin quicklint -a`\r\n> - [x] Added/updated tests (added; not executed at this head)\r\n> - [ ] Updated documentation (not applicable)\r\n> - [ ] Included benchmark results (not applicable)\r\n\r\n---\r\n\r\n## Linked issue or supporting maintainer\r\n\r\nPart of #185590\r\n\r\n## BC-breaking?\r\n\r\nNo\r\n\r\n## Summary (human written only)\r\n\r\n> Support for distributed functionality and FP64 precision differs across hardware backends, and the test framework should not rely on hardcoded judgments tied to specific backends such as CUDA. By declaring and checking these capabilities in a uniform way, tests can run normally on devices that support them and skip sensibly on devices that do not, while missing capability declarations are caught promptly, improving the cross-hardware compatibility, maintainability, and reliability of PyTorch test results.\r\n\r\n## Agent details (if applicable)\r\n\r\n> AI attribution: the Summary is the author's own viewpoint (Chinese, translated to English by AI); the technical details below are AI-drafted.\r\n>\r\n> This PR adds two capability identifiers to the device-type test framework: `Capability.distributed.backend` and `Capability.dtype.fp64`.\r\n>\r\n> `distributed.backend` reflects whether a device's default distributed backend is available; `dtype.fp64` reflects device FP64 support. PrivateUse1 providers own their capability registrations.\r\n>\r\n> Requirements are checked at the existing method decorator: supported capabilities run normally, declared-unsupported raises `SkipTest`, and undeclared raises `AssertionError`.\r\n>\r\n> Added `TestFP64CapabilityDeclarations` in `test/test_testing.py`, and the OpenReg fixture now builds fixture-local capability maps instead of mutating `PrivateUse1TestBase` globally.\r\n>\r\n> Validation: scoped lint passed for the changed files under the existing configuration and exclusions; the added tests were not run (no source-consistent local build); CI workflows are action_required with no jobs run.\r\n",
+  "facts": {
+    "actionable_labelers": [],
+    "author_has_triage_permission": false,
+    "has_actionable_linked_issue": false,
+    "has_maintainer_activity": true,
+    "has_related_actionable_issue": false,
+    "has_supporter": false,
+    "is_already_handled": false,
+    "is_open_non_draft_pr_against_main": true,
+    "maintainer_requested_reviewers": [],
+    "supporters": []
+  },
+  "identity": {
+    "head_sha": "f22c53dcb48db3e943238ca06c180f8f3c990b1e",
+    "number": 191919,
+    "repository": "pytorch/pytorch",
+    "workflow_sha": "e916b30b6d1d49e6df8d067ef013704fe0e32940"
+  },
+  "title": "[Testcase Refactoring] Add distributed test capability gates"
+}

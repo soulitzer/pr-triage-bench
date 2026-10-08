@@ -1,0 +1,14 @@
+[
+  {
+    "sha": "44d910fbbf97c4695b20facd3ac3823ad08c66c0",
+    "filename": "test/quantization/ao_migration/test_quantization.py",
+    "status": "modified",
+    "additions": 6,
+    "deletions": 1,
+    "changes": 7,
+    "blob_url": "https://github.com/pytorch/pytorch/blob/804c3d546b7799ae989217e20c6c713e0e004356/test%2Fquantization%2Fao_migration%2Ftest_quantization.py",
+    "raw_url": "https://github.com/pytorch/pytorch/raw/804c3d546b7799ae989217e20c6c713e0e004356/test%2Fquantization%2Fao_migration%2Ftest_quantization.py",
+    "contents_url": "https://api.github.com/repos/pytorch/pytorch/contents/test%2Fquantization%2Fao_migration%2Ftest_quantization.py?ref=804c3d546b7799ae989217e20c6c713e0e004356",
+    "patch": "@@ -1,6 +1,9 @@\n # Owner(s): [\"oncall: quantization\"]\n \n-from torch.testing._internal.common_utils import raise_on_run_directly\n+from torch.testing._internal.common_utils import (\n+    HardwareClassification,\n+    raise_on_run_directly,\n+)\n \n from .common import AOMigrationTestCase\n \n@@ -10,6 +13,8 @@ class TestAOMigrationQuantization(AOMigrationTestCase):\n     `torch/quantization` migration to `torch/ao/quantization`.\n     \"\"\"\n \n+    hw_classification = HardwareClassification.GENERIC\n+\n     def test_function_import_quantize(self):\n         function_list = [\n             \"_convert\","
+  }
+]

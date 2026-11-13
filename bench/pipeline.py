@@ -16,6 +16,10 @@ CONFIG_PATHS = (
     f"{CONFIG_DIR}/extra_ownership_metadata.json",
     f"{CONFIG_DIR}/team_members.json",
 )
+# The pi harness loads the same extensions as .github/actions/pi-agent.
+PI_EXTENSION_PATHS = tuple(
+    f".github/actions/pi-agent/extensions/{name}" for name in ("tool-guard.ts", "submit-result.ts")
+)
 CACHE_DIR = REPO_ROOT / "cache" / "pipeline"
 # Snapshots are taken of PRs the bot already handled, which intake would skip.
 HANDLED_CHECK = "    return bool(names & HANDLED_LABELS)\n"
@@ -26,19 +30,24 @@ def fetch_pipeline(pytorch_sha: str, /) -> Path:
     """Download the pipeline scripts and trusted config once per commit."""
 
     root = CACHE_DIR / pytorch_sha
-    if (root / ".complete").exists():
-        return root
-    shutil.rmtree(root, ignore_errors=True)
-    entries = gh_api(f"repos/{REPOSITORY}/contents/{PIPELINE_DIR}?ref={pytorch_sha}")
-    paths = [f"{PIPELINE_DIR}/{e['name']}" for e in entries if e["type"] == "file"]
-    for path in paths + list(CONFIG_PATHS):
-        target = root / path
-        target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_bytes(
-            gh_api(f"repos/{REPOSITORY}/contents/{path}?ref={pytorch_sha}", raw=True)
-        )
-    (root / ".complete").touch()
+    if not (root / ".complete").exists():
+        shutil.rmtree(root, ignore_errors=True)
+        entries = gh_api(f"repos/{REPOSITORY}/contents/{PIPELINE_DIR}?ref={pytorch_sha}")
+        paths = [f"{PIPELINE_DIR}/{e['name']}" for e in entries if e["type"] == "file"]
+        for path in paths + list(CONFIG_PATHS):
+            fetch_file(path, pytorch_sha=pytorch_sha, root=root)
+        (root / ".complete").touch()
+    # Fetched separately so caches from before the pi harness stay valid.
+    for path in PI_EXTENSION_PATHS:
+        if not (root / path).exists():
+            fetch_file(path, pytorch_sha=pytorch_sha, root=root)
     return root
+
+
+def fetch_file(path: str, /, *, pytorch_sha: str, root: Path) -> None:
+    target = root / path
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_bytes(gh_api(f"repos/{REPOSITORY}/contents/{path}?ref={pytorch_sha}", raw=True))
 
 
 def prepare_pipeline(*, pytorch_sha: str, dest: Path) -> Path:
